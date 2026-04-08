@@ -5,7 +5,7 @@ Use this prompt as the first substantial Codex task after the repo is initialize
 ---
 
 You are working in a portfolio project called **Subscription Ops Console**.
-Before making changes, read `AGENTS.md`, `README.md`, and `docs/execplans/project-bootstrap.md` and follow them.
+Before making changes, read `AGENTS.md`, `README.md`, and `docs/project-bootstrap.md` and follow them.
 
 ## Objective
 

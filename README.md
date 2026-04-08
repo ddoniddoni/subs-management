@@ -58,7 +58,7 @@ TeamFit은 월간 웰니스 멤버십을 판매하는 구독 서비스입니다.
 
 - **프레임워크**: Next.js (App Router)
 - **언어**: TypeScript (strict)
-- **패키지 매니저**: pnpm
+- **패키지 매니저**: npm
 - **스타일링**: 한 가지 일관된 방식만 사용
 - **데이터**: 우선 로컬 목업 또는 fixture 사용, 실제 결제 연동은 v1 범위에서 제외
 - **테스트**: 핵심 관리자 흐름에 대해 unit/integration + E2E 테스트
@@ -157,12 +157,12 @@ docs/
 저장소는 최종적으로 아래 명령어들을 지원하는 것을 목표로 합니다.
 
 ```bash
-pnpm install
-pnpm dev
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
+npm install
+npm run dev
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
 
 프로젝트 초기 단계에서 아직 없는 명령어가 있다면, 셋업 과정에서 함께 추가합니다.
@@ -197,5 +197,5 @@ pnpm build
 
 - `AGENTS.md`
 - `docs/product-spec.md`
-- `docs/execplans/project-bootstrap.md`
+- `docs/project-bootstrap.md`
 - `docs/screen-map.md`
