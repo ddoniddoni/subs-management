@@ -1,3 +1,5 @@
+import { PageHeader } from "@/components/shared/page-header";
+
 type RoutePlaceholderProps = {
   eyebrow: string;
   title: string;
@@ -12,21 +14,17 @@ export function RoutePlaceholder({
   bullets,
 }: RoutePlaceholderProps) {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-16 sm:px-10">
-      <div className="max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-          {eyebrow}
-        </p>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-          {title}
-        </h1>
-        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-          {description}
-        </p>
-      </div>
+    <main className="flex flex-col gap-10">
+      <PageHeader
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
+      />
 
-      <section className="mt-12 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Step 01 scaffold</h2>
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-950">
+          부트스트랩 안내
+        </h2>
         <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
           {bullets.map((bullet) => (
             <li key={bullet} className="flex gap-3">
