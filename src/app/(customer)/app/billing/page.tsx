@@ -1,52 +1,64 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
-
-const billingRows = [
-  {
-    invoice: "INV-240401",
-    amount: "29,000원",
-    status: { label: "결제 완료", tone: "success" as const },
-    date: "2026-04-01",
-  },
-  {
-    invoice: "INV-240301",
-    amount: "29,000원",
-    status: { label: "환불 처리", tone: "warning" as const },
-    date: "2026-03-01",
-  },
-  {
-    invoice: "INV-240201",
-    amount: "29,000원",
-    status: { label: "결제 실패", tone: "danger" as const },
-    date: "2026-02-01",
-  },
-];
+import { paymentStatusMeta } from "@/lib/domain-meta";
+import { formatCurrency, formatDate } from "@/lib/format";
+import {
+  currentCustomerId,
+  invoices,
+  payments,
+} from "@/mocks/subscription-data";
 
 export default function BillingPage() {
+  const billingRows = invoices
+    .filter((invoice) => {
+      const payment = payments.find((item) => item.invoiceId === invoice.id);
+      return payment?.customerId === currentCustomerId;
+    })
+    .map((invoice) => {
+      const payment = payments.find((item) => item.invoiceId === invoice.id);
+      const statusMeta = paymentStatusMeta[invoice.paymentStatus];
+
+      return {
+        invoiceNumber: invoice.number,
+        amount: formatCurrency(invoice.amount),
+        statusMeta,
+        issuedAt: formatDate(invoice.issuedAt),
+        methodLabel: payment?.methodLabel ?? "수단 미확인",
+      };
+    });
+
   return (
     <main className="flex flex-col gap-10">
       <PageHeader
         eyebrow="고객 계정"
         title="결제 내역"
-        description="결제 내역 화면은 고객이 청구서, 결제 상태, 환불 여부를 빠르게 파악할 수 있도록 명확한 표 구조를 가져야 합니다."
+        description="청구서 번호, 결제 수단, 처리 상태를 한눈에 확인할 수 있도록 실제 목업 데이터를 기반으로 구성한 결제 내역 화면입니다."
       />
 
       <TableShell
         title="최근 청구 내역"
-        description="현재는 UI 프리미티브 확인을 위한 샘플 행만 보여주고 있으며, 실제 결제 데이터는 이후 단계에서 연결됩니다."
-        columns={["청구서", "금액", "상태", "결제일"]}
+        description="결제 성공, 환불 처리, 실패 건이 함께 보이도록 구성해 고객과 운영팀 모두 같은 맥락을 확인할 수 있게 합니다."
+        columns={["청구서", "금액", "상태", "청구일", "결제 수단"]}
       >
         {billingRows.map((row) => (
-          <tr key={row.invoice} className="border-t border-slate-200">
+          <tr key={row.invoiceNumber} className="border-t border-slate-200">
             <td className="px-6 py-4 text-sm font-medium text-slate-950">
-              {row.invoice}
+              {row.invoiceNumber}
             </td>
             <td className="px-6 py-4 text-sm text-slate-600">{row.amount}</td>
             <td className="px-6 py-4 text-sm text-slate-600">
-              <StatusBadge label={row.status.label} tone={row.status.tone} />
+              <StatusBadge
+                label={row.statusMeta.label}
+                tone={row.statusMeta.tone}
+              />
             </td>
-            <td className="px-6 py-4 text-sm text-slate-600">{row.date}</td>
+            <td className="px-6 py-4 text-sm text-slate-600">
+              {row.issuedAt}
+            </td>
+            <td className="px-6 py-4 text-sm text-slate-600">
+              {row.methodLabel}
+            </td>
           </tr>
         ))}
       </TableShell>

@@ -2,60 +2,77 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
-
-const customerRows = [
-  {
-    name: "김민서",
-    plan: "프로 플랜",
-    status: { label: "활성", tone: "success" as const },
-    payment: { label: "정상 결제", tone: "info" as const },
-  },
-  {
-    name: "이도윤",
-    plan: "팀 플랜",
-    status: { label: "결제 지연", tone: "warning" as const },
-    payment: { label: "재시도 필요", tone: "warning" as const },
-  },
-  {
-    name: "박서준",
-    plan: "스타터 플랜",
-    status: { label: "해지 예정", tone: "danger" as const },
-    payment: { label: "최근 실패", tone: "danger" as const },
-  },
-];
+import {
+  paymentStatusMeta,
+  subscriptionStatusMeta,
+} from "@/lib/domain-meta";
+import { customers, payments, plans, subscriptions } from "@/mocks/subscription-data";
 
 export default function AdminCustomersPage() {
+  const customerRows = customers.map((customer) => {
+    const subscription = subscriptions.find(
+      (item) => item.customerId === customer.id,
+    );
+    const plan = plans.find((item) => item.id === subscription?.planId);
+    const latestPayment = payments
+      .filter((item) => item.customerId === customer.id)
+      .toSorted((a, b) => b.attemptedAt.localeCompare(a.attemptedAt))[0];
+
+    return {
+      name: customer.name,
+      email: customer.email,
+      planName: plan?.name ?? "미정",
+      subscriptionMeta: subscription
+        ? subscriptionStatusMeta[subscription.status]
+        : { label: "구독 없음", tone: "neutral" as const },
+      paymentMeta: latestPayment
+        ? paymentStatusMeta[latestPayment.status]
+        : { label: "결제 없음", tone: "neutral" as const },
+    };
+  });
+
   return (
     <main className="flex flex-col gap-10">
       <PageHeader
         eyebrow="관리자 운영"
         title="고객 운영"
-        description="고객 목록 화면은 검색, 필터, 상태 파악의 중심이 되므로 테이블 셸과 상태 배지가 먼저 안정적으로 준비되어야 합니다."
+        description="실제 고객, 구독, 결제 목업 데이터를 한 화면에서 조합해 운영자가 어떤 상태를 우선 봐야 하는지 보여주는 테이블입니다."
       />
 
       <TableShell
-        title="고객 목록 미리보기"
-        description="현재는 공통 UI를 검증하기 위한 샘플 행만 넣어두었고, 실제 고객 데이터와 필터는 다음 단계에서 추가됩니다."
-        columns={["고객명", "플랜", "구독 상태", "최근 결제"]}
+        title="고객 목록"
+        description="활성, 결제 지연, 해지 예정 고객이 한 화면에서 드러나도록 구성해 이후 검색과 필터 추가를 위한 기준 데이터를 마련합니다."
+        columns={["고객명", "이메일", "플랜", "구독 상태", "최근 결제"]}
       >
         {customerRows.map((row) => (
           <tr key={row.name} className="border-t border-slate-200">
             <td className="px-6 py-4 text-sm font-medium text-slate-950">
               {row.name}
             </td>
-            <td className="px-6 py-4 text-sm text-slate-600">{row.plan}</td>
             <td className="px-6 py-4 text-sm text-slate-600">
-              <StatusBadge label={row.status.label} tone={row.status.tone} />
+              {row.email}
             </td>
             <td className="px-6 py-4 text-sm text-slate-600">
-              <StatusBadge label={row.payment.label} tone={row.payment.tone} />
+              {row.planName}
+            </td>
+            <td className="px-6 py-4 text-sm text-slate-600">
+              <StatusBadge
+                label={row.subscriptionMeta.label}
+                tone={row.subscriptionMeta.tone}
+              />
+            </td>
+            <td className="px-6 py-4 text-sm text-slate-600">
+              <StatusBadge
+                label={row.paymentMeta.label}
+                tone={row.paymentMeta.tone}
+              />
             </td>
           </tr>
         ))}
       </TableShell>
 
       <EmptyState
-        title="저장된 고객 세그먼트가 아직 없습니다"
+        title="저장된 고객 세그먼트는 아직 없습니다"
         description="다음 단계에서 검색과 필터가 추가되면, 자주 보는 고객 세그먼트나 저장된 뷰를 이 영역에 배치할 수 있습니다."
       />
     </main>
