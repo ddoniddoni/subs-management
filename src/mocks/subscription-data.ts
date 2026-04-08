@@ -227,6 +227,7 @@ export const refunds: Refund[] = [
     status: "approved",
     requestedAt: "2026-03-02T11:30:00+09:00",
     reviewedAt: "2026-03-02T14:00:00+09:00",
+    reviewComment: "중복 결제가 확인되어 전액 환불로 마감했습니다.",
   },
   {
     id: "refund_002",
@@ -237,6 +238,7 @@ export const refunds: Refund[] = [
     status: "requested",
     requestedAt: "2026-04-15T13:20:00+09:00",
     reviewedAt: null,
+    reviewComment: null,
   },
 ];
 

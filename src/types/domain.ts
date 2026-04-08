@@ -88,6 +88,7 @@ export type Refund = {
   status: RefundStatus;
   requestedAt: string;
   reviewedAt: string | null;
+  reviewComment: string | null;
 };
 
 export type Coupon = {
