@@ -1,36 +1,201 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Subscription Ops Console
 
-## Getting Started
+현실적인 구독 서비스 운영 시나리오를 바탕으로, 고객용 앱과 관리자 운영 대시보드를 함께 다루는 프론트엔드 프로젝트입니다.
 
-First, run the development server:
+- **고객용 앱 (20~30%)**: 랜딩, 요금제, 체크아웃 목업, 내 구독, 결제 내역
+- **관리자 운영 대시보드 (70~80%)**: 고객, 구독, 결제, 환불, 쿠폰, 분석, 관리자 역할, 감사 로그
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+이 프로젝트는 단순한 데모 UI보다, 실제 서비스에 가까운 운영 흐름과 유지보수 가능한 프론트엔드 구조를 만드는 데 초점을 둡니다.
+
+- 운영 흐름을 고려한 제품 설계
+- 유지보수하기 쉬운 기능 구조
+- 재사용 가능한 UI 컴포넌트
+- 접근성과 안정적인 UX 상태 처리
+- 테스트 가능한 구조
+- 측정 가능한 프론트엔드 품질
+
+## 프로젝트 시나리오
+
+이 저장소는 **TeamFit**이라는 가상의 서비스를 모델링합니다.
+
+TeamFit은 월간 웰니스 멤버십을 판매하는 구독 서비스입니다. 사용자는 요금제를 살펴보고, 구독을 신청하고, 결제를 관리할 수 있습니다. 내부 운영자는 관리자 콘솔에서 고객, 결제 이슈, 환불, 할인, 리포트를 관리합니다.
+
+이 설정은 도메인을 현실적으로 유지하면서도, 실제 서비스 프론트엔드에서 중요한 문제를 다룰 수 있게 해줍니다.
+
+## 이 프로젝트가 보여줘야 하는 것
+
+### 고객용 앱
+- 명확한 랜딩 및 요금제 경험
+- 현실감 있는 플랜 선택 및 체크아웃 흐름
+- 구독 요약 및 결제 내역
+- active, paused, canceled, past-due 상태를 반영하는 UX
+
+### 관리자 대시보드
+- 대규모 테이블 및 상세 보기 중심의 워크플로우
+- 필터 / 검색 / 정렬 / 페이지네이션 패턴
+- 확인 절차가 포함된 복잡한 상태 변경 흐름
+- 환불 및 결제 복구를 위한 안전한 액션 설계
+- 운영 판단에 도움이 되는 KPI 카드와 차트
+- 역할 기반 UI와 감사 가능성
+
+## 핵심 도메인 엔티티
+
+- `customer`
+- `plan`
+- `subscription`
+- `payment`
+- `invoice`
+- `refund`
+- `coupon`
+- `adminUser`
+- `role`
+- `auditEvent`
+- `metricSnapshot`
+
+## 권장 기술 스택
+
+저장소에 더 적절한 방식이 이미 정해져 있지 않다면 아래를 기본값으로 사용합니다.
+
+- **프레임워크**: Next.js (App Router)
+- **언어**: TypeScript (strict)
+- **패키지 매니저**: pnpm
+- **스타일링**: 한 가지 일관된 방식만 사용
+- **데이터**: 우선 로컬 목업 또는 fixture 사용, 실제 결제 연동은 v1 범위에서 제외
+- **테스트**: 핵심 관리자 흐름에 대해 unit/integration + E2E 테스트
+
+## 권장 정보 구조
+
+### 공개 / 고객용 라우트
+- `/`
+- `/pricing`
+- `/checkout`
+- `/app/subscription`
+- `/app/billing`
+
+### 관리자 라우트
+- `/admin`
+- `/admin/customers`
+- `/admin/customers/[customerId]`
+- `/admin/subscriptions`
+- `/admin/payments`
+- `/admin/refunds`
+- `/admin/coupons`
+- `/admin/analytics`
+- `/admin/admin-users`
+- `/admin/audit-log`
+
+## 기본 프로젝트 구조
+
+```txt
+src/
+  app/
+  features/
+    customers/
+    subscriptions/
+    payments/
+    refunds/
+    coupons/
+    analytics/
+    admin-users/
+    audit-log/
+  components/
+    ui/
+    shared/
+  lib/
+  mocks/
+  types/
+tests/
+docs/
+  execplans/
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## V1 범위
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 필수 구현 항목
+- 랜딩 페이지
+- 요금제 페이지
+- 목업 체크아웃 또는 플랜 선택 흐름
+- 내 구독 페이지
+- 결제 내역 페이지
+- KPI 카드와 차트가 포함된 관리자 대시보드 홈
+- 검색 / 필터 / 정렬 / 페이지네이션이 가능한 고객 목록
+- 고객 상세 페이지
+- 구독 상태 전환 흐름
+- 결제 실패 처리 기능이 포함된 결제 내역
+- 환불 승인 및 반려 흐름
+- 쿠폰 발급 / 회수 흐름
+- 감사 로그 페이지
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 이후 확장 가능 항목
+- 선택한 고객 대상 벌크 액션
+- 롤백 처리가 포함된 optimistic update
+- 대용량 목록을 위한 테이블 가상화
+- 조직 또는 테넌트 전환 기능
+- CSV 내보내기
+- 알림 센터
 
-## Learn More
+## UX 품질 기준
 
-To learn more about Next.js, take a look at the following resources:
+- 모든 비동기 화면은 반드시 **loading**, **empty**, **error**, **success** 상태를 보여줘야 합니다.
+- 파괴적이거나 위험도가 높은 액션은 반드시 확인 절차를 거쳐야 합니다.
+- 폼에는 라벨, 보조 텍스트, 검증, 키보드 접근성이 필요합니다.
+- 아이콘만 있는 버튼에는 접근 가능한 이름이 필요합니다.
+- 모달, 다이얼로그, 메뉴는 포커스 관리가 올바르게 되어야 합니다.
+- 차트는 운영에 도움이 되는 정보를 전달해야 합니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 엔지니어링 기준
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- 문서화된 이유 없이 `any`를 사용하지 않습니다.
+- 상태 enum과 라벨은 중앙에서 관리합니다.
+- 페이지마다 동일한 도메인 로직을 중복 구현하지 않습니다.
+- 유지보수성이 좋아진다면 재사용 가능한 테이블 / 폼 설정 방식을 우선합니다.
+- 바로 이해하기 어려운 설계 판단은 `docs/`에 기록합니다.
+- 클라이언트 컴포넌트는 상호작용이 필요한 경우에만 제한적으로 사용합니다.
 
-## Deploy on Vercel
+## 예시 로컬 명령어
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+저장소는 최종적으로 아래 명령어들을 지원하는 것을 목표로 합니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm install
+pnpm dev
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+프로젝트 초기 단계에서 아직 없는 명령어가 있다면, 셋업 과정에서 함께 추가합니다.
+
+## 작업 단계
+
+### 1단계 — bootstrap
+- 앱 초기화
+- strict TypeScript 및 lint 설정
+- 기본 라우트 구조 생성
+- 목업 데이터와 도메인 타입 정의
+- 공통 레이아웃, 내비게이션, UI 기본 컴포넌트 구성
+
+### 2단계 — 고객용 앱
+- 랜딩 / 요금제 / 체크아웃 목업 구현
+- 내 구독 및 결제 내역 페이지 구현
+- 현실적인 구독 상태 지원
+
+### 3단계 — 관리자 콘솔
+- 고객 목록 및 상세 페이지
+- 결제 / 환불 / 쿠폰 워크플로우
+- 분석 대시보드
+- 관리자 사용자 및 감사 로그
+
+### 4단계 — 품질 개선
+- 접근성 보완
+- 핵심 흐름 테스트 추가
+- empty / error / loading 상태 정리
+- 성능 점검 및 번들 최적화
+
+## 관련 문서
+
+- `AGENTS.md`
+- `docs/product-spec.md`
+- `docs/execplans/project-bootstrap.md`
+- `docs/screen-map.md`
