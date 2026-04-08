@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/ui/page-header";
 
 type RoutePlaceholderProps = {
   eyebrow: string;

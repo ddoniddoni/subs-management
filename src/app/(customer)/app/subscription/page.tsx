@@ -1,16 +1,40 @@
-import { RoutePlaceholder } from "@/components/shared/route-placeholder";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function SubscriptionPage() {
   return (
-    <RoutePlaceholder
-      eyebrow="고객 계정"
-      title="내 구독 페이지 골격"
-      description="이 페이지는 로그인한 고객에게 현재 플랜, 구독 상태, 갱신 시점, 최근 계정 활동을 보여주는 공간이 됩니다."
-      bullets={[
-        "구독 상태 배지는 다음 단계에서 추가됩니다.",
-        "계정 화면을 점진적으로 연결할 수 있도록 먼저 경로를 마련했습니다.",
-        "이후 작업에서 공통 구독 도메인 모델과 이 페이지를 연결할 예정입니다.",
-      ]}
-    />
+    <main className="flex flex-col gap-10">
+      <PageHeader
+        eyebrow="고객 계정"
+        title="내 구독"
+        description="실제 구독 데이터 연결 전 단계에서, 고객이 보게 될 핵심 정보 배치와 상태 표현 방식을 먼저 구성한 화면입니다."
+      />
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusBadge label="활성" tone="success" />
+          <StatusBadge label="월간 플랜" tone="info" />
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <StatCard
+            label="현재 플랜"
+            value="프로 플랜"
+            description="관리 기능과 고객용 셀프서비스 흐름을 모두 사용할 수 있는 기준 플랜입니다."
+          />
+          <StatCard
+            label="다음 결제일"
+            value="4월 30일"
+            description="실제 날짜 계산은 Step 04에서 목업 구독 데이터와 연결할 예정입니다."
+          />
+          <StatCard
+            label="최근 변경"
+            value="업그레이드"
+            description="상태 변경 이력과 활동 요약은 이후 계정 화면에서 더 구체화됩니다."
+          />
+        </div>
+      </section>
+    </main>
   );
 }
