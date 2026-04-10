@@ -122,6 +122,13 @@ const adminRoutePolicies: AdminRoutePolicy[] = [
     allowedRoles: ["viewer", "support", "ops_admin"],
   },
   {
+    href: "/admin/subscriptions",
+    label: "구독",
+    description:
+      "구독 상태 변경, 취소 예정 관리, 정상 복구를 운영 워크플로로 처리합니다.",
+    allowedRoles: ["support", "ops_admin"],
+  },
+  {
     href: "/admin/payments",
     label: "결제",
     description: "결제 실패를 검토하고 결제 상세 이력을 점검합니다.",

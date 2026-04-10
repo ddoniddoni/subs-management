@@ -1,20 +1,13 @@
-import { SubscriptionStatusWorkbench } from "@/features/customers/components/subscription-status-workbench";
-import {
-  auditEvents,
-  customers,
-  payments,
-  plans,
-  subscriptions,
-} from "@/mocks/subscription-data";
+import { CustomerOpsTableView } from "@/features/customers/components/customer-ops-table-view";
+import { customers, payments, plans, subscriptions } from "@/mocks/subscription-data";
 
 export default function AdminCustomersPage() {
   return (
-    <SubscriptionStatusWorkbench
-      auditEvents={auditEvents}
+    <CustomerOpsTableView
       customers={customers}
+      payments={payments}
       plans={plans}
       subscriptions={subscriptions}
-      payments={payments}
     />
   );
 }

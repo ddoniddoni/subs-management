@@ -14,6 +14,7 @@ export const customerNavigationItems: NavigationItem[] = [
 export const adminNavigationItems: NavigationItem[] = [
   { href: "/admin", label: "개요" },
   { href: "/admin/customers", label: "고객" },
+  { href: "/admin/subscriptions", label: "구독" },
   { href: "/admin/payments", label: "결제" },
   { href: "/admin/refunds", label: "환불" },
   { href: "/admin/coupons", label: "쿠폰" },

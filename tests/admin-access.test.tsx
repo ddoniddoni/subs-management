@@ -23,6 +23,10 @@ describe("admin access helpers", () => {
     expect(canAccessAdminRoute("billing_manager", "/admin/payments/pay_001")).toBe(true);
     expect(canAccessAdminRoute("support", "/admin/payments/pay_001")).toBe(false);
     expect(canAccessAdminRoute("viewer", "/admin/customers/cust_001")).toBe(true);
+    expect(canAccessAdminRoute("support", "/admin/subscriptions")).toBe(true);
+    expect(canAccessAdminRoute("billing_manager", "/admin/subscriptions")).toBe(
+      false,
+    );
   });
 
   it("filters, sorts, and paginates admin directory rows", () => {
@@ -83,6 +87,19 @@ describe("AdminAccessShell", () => {
 
     expect(await screen.findByText("payment workbench")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /정하은/ })).toBeInTheDocument();
+  });
+
+  it("allows the support role to access the subscriptions route", async () => {
+    mockPathname = "/admin/subscriptions";
+    mockSearchParams = new URLSearchParams("admin=admin_003");
+
+    render(
+      <AdminAccessShell adminUsers={adminUsers}>
+        <div>subscription workbench</div>
+      </AdminAccessShell>,
+    );
+
+    expect(await screen.findByText("subscription workbench")).toBeInTheDocument();
   });
 });
 
