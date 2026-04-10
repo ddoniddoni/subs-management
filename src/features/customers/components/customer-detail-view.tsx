@@ -247,7 +247,12 @@ export function CustomerDetailView({ snapshot }: CustomerDetailViewProps) {
           payments.map((payment) => (
             <tr key={payment.id} className="border-t border-slate-200">
               <td className="px-6 py-4 text-sm font-medium text-slate-950">
-                {payment.id}
+                <Link
+                  href={`/admin/payments/${payment.id}`}
+                  className="transition hover:text-slate-700 hover:underline"
+                >
+                  {payment.id}
+                </Link>
               </td>
               <td className="px-6 py-4 text-sm text-slate-600">
                 <StatusBadge

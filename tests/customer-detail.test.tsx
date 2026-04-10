@@ -79,5 +79,9 @@ describe("CustomerDetailView", () => {
     expect(
       screen.getByRole("link", { name: "결제 대응 화면 열기" }),
     ).toHaveAttribute("href", "/admin/payments");
+    expect(screen.getByRole("link", { name: "pay_001" })).toHaveAttribute(
+      "href",
+      "/admin/payments/pay_001",
+    );
   });
 });

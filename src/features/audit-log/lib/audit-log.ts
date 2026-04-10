@@ -131,12 +131,12 @@ function getAuditTargetHref({
 
   if (entityType === "payment") {
     const payment = payments.find((item) => item.id === targetId);
-    return payment ? `/admin/customers/${payment.customerId}` : "/admin/payments";
+    return payment ? `/admin/payments/${targetId}` : "/admin/payments";
   }
 
   if (entityType === "refund") {
     const refund = refunds.find((item) => item.id === targetId);
-    return refund ? `/admin/customers/${refund.customerId}` : "/admin/refunds";
+    return refund ? `/admin/refunds/${targetId}` : "/admin/refunds";
   }
 
   if (entityType === "coupon") {

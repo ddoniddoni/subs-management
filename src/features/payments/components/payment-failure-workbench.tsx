@@ -162,16 +162,24 @@ export function PaymentFailureWorkbench({
                 {formatDate(row.payment.attemptedAt)}
               </td>
               <td className="px-6 py-4 text-sm text-slate-600">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedPaymentId(row.payment.id);
-                    setPendingAction(null);
-                  }}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                >
-                  대응하기
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPaymentId(row.payment.id);
+                      setPendingAction(null);
+                    }}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    대응하기
+                  </button>
+                  <Link
+                    href={`/admin/payments/${row.payment.id}`}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                  >
+                    상세 보기
+                  </Link>
+                </div>
               </td>
             </tr>
           );
@@ -204,6 +212,12 @@ export function PaymentFailureWorkbench({
                 고객 상세 보기
               </Link>
             ) : null}
+            <Link
+              href={`/admin/payments/${selectedRow.payment.id}`}
+              className="mt-2 inline-flex text-sm font-medium text-slate-700 transition hover:text-slate-950 hover:underline"
+            >
+              결제 상세 보기
+            </Link>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <StatusBadge
