@@ -288,7 +288,12 @@ export function CustomerDetailView({ snapshot }: CustomerDetailViewProps) {
             refunds.map((refund) => (
               <tr key={refund.id} className="border-t border-slate-200">
                 <td className="px-6 py-4 text-sm font-medium text-slate-950">
-                  {refund.id}
+                  <Link
+                    href={`/admin/refunds/${refund.id}`}
+                    className="transition hover:text-slate-700 hover:underline"
+                  >
+                    {refund.id}
+                  </Link>
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
                   <StatusBadge
