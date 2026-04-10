@@ -19,6 +19,55 @@ function expectStatValue(label: string, value: string) {
 }
 
 describe("SubscriptionStatusWorkbench", () => {
+  it("supports search, filters, sorting, and pagination in the customer table", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SubscriptionStatusWorkbench
+        auditEvents={auditEvents}
+        customers={customers}
+        plans={plans}
+        subscriptions={subscriptions}
+        payments={payments}
+      />,
+    );
+
+    const customerTable = screen
+      .getByRole("heading", { name: "고객 구독 목록" })
+      .closest("section");
+
+    expect(customerTable).not.toBeNull();
+    expect(screen.getByText("1 / 2 페이지")).toBeInTheDocument();
+    expect(within(customerTable!).getByText("김민서")).toBeInTheDocument();
+    expect(within(customerTable!).getByText("박서준")).toBeInTheDocument();
+    expect(within(customerTable!).queryByText("이도윤")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "2" }));
+
+    expect(screen.getByText("2 / 2 페이지")).toBeInTheDocument();
+    expect(within(customerTable!).getByText("이도윤")).toBeInTheDocument();
+    expect(within(customerTable!).queryByText("김민서")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "1" }));
+    await user.selectOptions(screen.getByLabelText("정렬 기준"), "latest_payment");
+
+    expect(screen.getByText("1 / 2 페이지")).toBeInTheDocument();
+    expect(within(customerTable!).getByText("이도윤")).toBeInTheDocument();
+    expect(within(customerTable!).getByText("김민서")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("상태 필터"), "past_due");
+
+    expect(within(customerTable!).getByText("이도윤")).toBeInTheDocument();
+    expect(within(customerTable!).queryByText("김민서")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("고객 검색"));
+    await user.type(screen.getByLabelText("고객 검색"), "솔로헬스");
+    await user.selectOptions(screen.getByLabelText("상태 필터"), "all");
+
+    expect(within(customerTable!).getByText("박서준")).toBeInTheDocument();
+    expect(within(customerTable!).queryByText("이도윤")).not.toBeInTheDocument();
+  });
+
   it("changes a subscription status after confirmation and records the activity", async () => {
     const user = userEvent.setup();
 
@@ -32,7 +81,7 @@ describe("SubscriptionStatusWorkbench", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /일시 중지/ }));
+    await user.click(screen.getAllByRole("button", { name: /일시 중지/ })[0]!);
     await user.click(screen.getByRole("button", { name: "변경 확인" }));
 
     expect(

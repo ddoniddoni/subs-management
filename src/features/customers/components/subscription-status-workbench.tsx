@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 
 import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
 import { ActionFeedbackBanner } from "@/components/shared/action-feedback-banner";
@@ -16,6 +16,12 @@ import {
 } from "@/lib/domain-meta";
 import { formatDate } from "@/lib/format";
 import { mapAuditEventsToActivityItems } from "@/lib/workflow-activity";
+import {
+  buildCustomerTableRows,
+  filterAndSortCustomerTableRows,
+  paginateCustomerTableRows,
+  type CustomerTableSortKey,
+} from "@/features/customers/lib/customer-table";
 import type {
   AuditEvent,
   Customer,
@@ -32,6 +38,8 @@ type SubscriptionStatusWorkbenchProps = {
   subscriptions: Subscription[];
   payments: Payment[];
 };
+
+const PAGE_SIZE = 2;
 
 type TransitionOption = {
   description: string;
@@ -115,29 +123,42 @@ export function SubscriptionStatusWorkbench({
   );
   const [nextStatus, setNextStatus] = useState<SubscriptionStatus | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<SubscriptionStatus | "all">(
+    "all",
+  );
+  const [planFilter, setPlanFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<CustomerTableSortKey>("customer_name");
+  const [currentPage, setCurrentPage] = useState(1);
   const [activityItems, setActivityItems] = useState(() =>
     mapAuditEventsToActivityItems(
       auditEvents.filter((event) => event.entityType === "subscription"),
     ),
   );
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  const rows = localSubscriptions.map((subscription) => {
-    const customer = customers.find((item) => item.id === subscription.customerId);
-    const plan = plans.find((item) => item.id === subscription.planId);
-    const latestPayment = payments
-      .filter((item) => item.customerId === subscription.customerId)
-      .toSorted((a, b) => b.attemptedAt.localeCompare(a.attemptedAt))[0];
-
-    return {
-      customer,
-      latestPayment,
-      plan,
-      subscription,
-    };
+  const rows = buildCustomerTableRows({
+    customers,
+    payments,
+    plans,
+    subscriptions: localSubscriptions,
   });
+  const filteredRows = filterAndSortCustomerTableRows(rows, {
+    planId: planFilter === "all" ? undefined : planFilter,
+    query: deferredSearchQuery,
+    sortBy,
+    status: statusFilter === "all" ? undefined : statusFilter,
+  });
+  const paginatedRows = paginateCustomerTableRows(
+    filteredRows,
+    currentPage,
+    PAGE_SIZE,
+  );
 
   const selectedRow =
-    rows.find((row) => row.subscription.id === selectedSubscriptionId) ?? rows[0] ?? null;
+    filteredRows.find((row) => row.subscription.id === selectedSubscriptionId) ??
+    paginatedRows.pageRows[0] ??
+    null;
 
   const activeCount = localSubscriptions.filter(
     (item) => item.status === "active",
@@ -217,13 +238,90 @@ export function SubscriptionStatusWorkbench({
 
       {feedbackMessage ? <ActionFeedbackBanner message={feedbackMessage} /> : null}
 
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <label className="flex-1">
+            <span className="text-sm font-semibold text-slate-950">고객 검색</span>
+            <input
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="고객명, 이메일, 회사명으로 검색"
+              className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+            />
+          </label>
+
+          <label className="lg:w-52">
+            <span className="text-sm font-semibold text-slate-950">상태 필터</span>
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value as SubscriptionStatus | "all");
+                setCurrentPage(1);
+              }}
+              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+            >
+              <option value="all">전체 상태</option>
+              {Object.entries(subscriptionStatusMeta).map(([value, meta]) => (
+                <option key={value} value={value}>
+                  {meta.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="lg:w-52">
+            <span className="text-sm font-semibold text-slate-950">플랜 필터</span>
+            <select
+              value={planFilter}
+              onChange={(event) => {
+                setPlanFilter(event.target.value);
+                setCurrentPage(1);
+              }}
+              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+            >
+              <option value="all">전체 플랜</option>
+              {plans.map((plan) => (
+                <option key={plan.id} value={plan.id}>
+                  {plan.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="lg:w-52">
+            <span className="text-sm font-semibold text-slate-950">정렬 기준</span>
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as CustomerTableSortKey)}
+              className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+            >
+              <option value="customer_name">고객명 순</option>
+              <option value="latest_payment">최근 결제 최신순</option>
+              <option value="next_billing_date">다음 청구일 빠른순</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+          <span>
+            필터 결과 {paginatedRows.totalRows}건
+          </span>
+          <span>
+            {paginatedRows.currentPage} / {paginatedRows.totalPages} 페이지
+          </span>
+        </div>
+      </section>
+
       {rows.length > 0 ? (
         <TableShell
           title="고객 구독 목록"
-          description="상태를 변경할 고객을 선택하면 아래에서 전환 가능한 상태와 확인 단계를 볼 수 있습니다."
-          columns={["고객명", "플랜", "현재 상태", "최근 결제", "작업"]}
+          description="검색과 필터로 대상을 좁힌 뒤, 상태를 변경할 고객을 선택해 아래에서 전환 가능한 상태와 확인 단계를 볼 수 있습니다."
+          columns={["고객명", "회사", "플랜", "현재 상태", "최근 결제", "다음 청구", "작업"]}
         >
-          {rows.map((row) => {
+          {paginatedRows.pageRows.length > 0 ? paginatedRows.pageRows.map((row) => {
             const subscriptionMeta = subscriptionStatusMeta[row.subscription.status];
             const paymentMeta = row.latestPayment
               ? paymentStatusMeta[row.latestPayment.status]
@@ -244,6 +342,9 @@ export function SubscriptionStatusWorkbench({
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
+                  {row.customer.company}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
                   {row.plan?.name ?? "플랜 미정"}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
@@ -257,6 +358,11 @@ export function SubscriptionStatusWorkbench({
                     label={paymentMeta.label}
                     tone={paymentMeta.tone}
                   />
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  {row.subscription.nextBillingDate
+                    ? formatDate(row.subscription.nextBillingDate)
+                    : "예정 없음"}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
                   <div className="flex flex-wrap gap-2">
@@ -282,7 +388,16 @@ export function SubscriptionStatusWorkbench({
                 </td>
               </tr>
             );
-          })}
+          }) : (
+            <tr className="border-t border-slate-200">
+              <td className="px-6 py-8" colSpan={7}>
+                <EmptyState
+                  title="조건에 맞는 고객이 없습니다"
+                  description="검색어를 지우거나 필터를 조정해 다른 고객을 찾아보세요."
+                />
+              </td>
+            </tr>
+          )}
         </TableShell>
       ) : (
         <EmptyState
@@ -290,6 +405,52 @@ export function SubscriptionStatusWorkbench({
           description="구독 데이터가 준비되면 이 화면에서 상태 변경 워크플로우를 진행할 수 있습니다."
         />
       )}
+
+      {filteredRows.length > 0 ? (
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+          <p className="text-sm text-slate-600">
+            페이지 {paginatedRows.currentPage} / {paginatedRows.totalPages}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={paginatedRows.currentPage === 1}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              이전
+            </button>
+            {Array.from({ length: paginatedRows.totalPages }, (_, index) => index + 1).map(
+              (page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                    page === paginatedRows.currentPage
+                      ? "bg-slate-950 text-white"
+                      : "border border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                  }`}
+                >
+                  {page}
+                </button>
+              ),
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((page) =>
+                  Math.min(paginatedRows.totalPages, page + 1),
+                )
+              }
+              disabled={paginatedRows.currentPage === paginatedRows.totalPages}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              다음
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {selectedRow ? (
         <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
