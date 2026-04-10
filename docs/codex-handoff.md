@@ -3,10 +3,10 @@
 ## Snapshot
 
 - Date: 2026-04-11
-- Current branch: `step/17-subscription-ops-workbench`
+- Current branch: `develop`
 - Workspace status target: clean
-- `develop` status: merged through `step/16-admin-command-center`
-- `step/17-subscription-ops-workbench` status: implemented, committed, pushed to origin
+- `develop` status: merged through `step/17-subscription-ops-workbench` and ready for step 18
+- `origin/develop` should match this branch after the current push
 
 ## Completed Through Step 17
 
@@ -52,23 +52,24 @@ Included changes:
 - moved the subscription status workbench onto `/admin/subscriptions`
 - restored customer search/filter/sort/pagination on `/admin/customers`
 - updated command center links to use the subscriptions workflow
-- updated handoff documentation
+- added and updated handoff documentation
 
-Validation completed:
+Validation completed for step 17:
 
 - `npm.cmd run lint`
 - `npm.cmd run typecheck`
 - `npm.cmd run test`
 - `npm.cmd run build`
 
-Step 17 commit history:
+Relevant commits:
 
 - `fc73be9` `feat(admin): add subscription ops workbench`
+- `b9bb1a3` `docs(repo): add codex handoff`
 
 ## Remote Status
 
-- `origin/develop` is at step 16
-- `origin/step/17-subscription-ops-workbench` exists and contains step 17 work
+- `origin/develop` should include step 17 after the current push
+- `origin/step/17-subscription-ops-workbench` already contains the step 17 branch history
 
 ## Resume Checklist
 
@@ -83,8 +84,6 @@ Step 17 commit history:
 
 If continuing with a new step:
 
-1. merge `step/17-subscription-ops-workbench` into `develop`
-2. push `develop`
-3. create `step/18-<slug>` from latest `develop`
-4. create both planning docs before implementation
-5. implement, validate, commit, and push
+1. create `step/18-<slug>` from latest `develop`
+2. create both planning docs before implementation
+3. implement, validate, commit, and push
