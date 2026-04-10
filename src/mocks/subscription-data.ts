@@ -352,3 +352,47 @@ export const metricSnapshot: MetricSnapshot = {
   refundsPending: 7,
   churnRate: 2.8,
 };
+
+export const metricSnapshots: MetricSnapshot[] = [
+  {
+    capturedAt: "2025-11-10T09:00:00+09:00",
+    activeCustomers: 1112,
+    monthlyRecurringRevenue: 31800000,
+    failedPayments: 24,
+    refundsPending: 5,
+    churnRate: 3.4,
+  },
+  {
+    capturedAt: "2025-12-10T09:00:00+09:00",
+    activeCustomers: 1156,
+    monthlyRecurringRevenue: 32900000,
+    failedPayments: 20,
+    refundsPending: 4,
+    churnRate: 3.2,
+  },
+  {
+    capturedAt: "2026-01-10T09:00:00+09:00",
+    activeCustomers: 1198,
+    monthlyRecurringRevenue: 34100000,
+    failedPayments: 18,
+    refundsPending: 5,
+    churnRate: 3.1,
+  },
+  {
+    capturedAt: "2026-02-10T09:00:00+09:00",
+    activeCustomers: 1231,
+    monthlyRecurringRevenue: 35600000,
+    failedPayments: 27,
+    refundsPending: 6,
+    churnRate: 3.0,
+  },
+  {
+    capturedAt: "2026-03-10T09:00:00+09:00",
+    activeCustomers: 1260,
+    monthlyRecurringRevenue: 37100000,
+    failedPayments: 29,
+    refundsPending: 6,
+    churnRate: 2.9,
+  },
+  metricSnapshot,
+];
