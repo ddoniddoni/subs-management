@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
+import { ActionFeedbackBanner } from "@/components/shared/action-feedback-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -9,9 +11,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
 import { refundStatusMeta } from "@/lib/domain-meta";
 import { formatCurrency, formatDate } from "@/lib/format";
-import type { Customer, Payment, Refund } from "@/types/domain";
+import { mapAuditEventsToActivityItems } from "@/lib/workflow-activity";
+import type { AuditEvent, Customer, Payment, Refund } from "@/types/domain";
 
 type RefundReviewBoardProps = {
+  auditEvents: AuditEvent[];
   customers: Customer[];
   payments: Payment[];
   refunds: Refund[];
@@ -20,6 +24,7 @@ type RefundReviewBoardProps = {
 type RefundDecision = "approved" | "rejected" | null;
 
 export function RefundReviewBoard({
+  auditEvents,
   customers,
   payments,
   refunds,
@@ -33,6 +38,11 @@ export function RefundReviewBoard({
   const [decision, setDecision] = useState<RefundDecision>(null);
   const [reviewComment, setReviewComment] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [activityItems, setActivityItems] = useState(() =>
+    mapAuditEventsToActivityItems(
+      auditEvents.filter((event) => event.entityType === "refund"),
+    ),
+  );
 
   const rows = localRefunds
     .toSorted((a, b) => b.requestedAt.localeCompare(a.requestedAt))
@@ -60,11 +70,15 @@ export function RefundReviewBoard({
       return;
     }
 
+    const now = new Date().toISOString();
     const effectiveComment =
       reviewComment.trim() ||
       (decision === "approved"
         ? "환불 기준을 충족해 승인했습니다."
         : "환불 기준 미충족으로 반려했습니다.");
+    const summary = `${selectedRow.customer?.name ?? "고객"}의 환불 요청을 ${
+      decision === "approved" ? "승인" : "반려"
+    }했습니다.`;
 
     setLocalRefunds((current) =>
       current.map((refund) =>
@@ -72,18 +86,23 @@ export function RefundReviewBoard({
           ? {
               ...refund,
               status: decision,
-              reviewedAt: new Date().toISOString(),
+              reviewedAt: now,
               reviewComment: effectiveComment,
             }
           : refund,
       ),
     );
 
-    setFeedbackMessage(
-      `${selectedRow.customer?.name ?? "고객"}의 환불 요청을 ${
-        decision === "approved" ? "승인" : "반려"
-      }했습니다.`,
-    );
+    setFeedbackMessage(summary);
+    setActivityItems((current) => [
+      {
+        id: `refund-${selectedRow.refund.id}-${now}`,
+        occurredAt: now,
+        summary,
+        detail: `refund · ${selectedRow.refund.id} · ${effectiveComment}`,
+      },
+      ...current,
+    ]);
     setDecision(null);
     setReviewComment("");
   }
@@ -114,57 +133,57 @@ export function RefundReviewBoard({
         />
       </section>
 
-      {feedbackMessage ? (
-        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-          <p className="text-sm font-semibold text-emerald-700">처리 완료</p>
-          <p className="mt-2 text-sm leading-6 text-emerald-700">
-            {feedbackMessage}
-          </p>
-        </section>
-      ) : null}
+      {feedbackMessage ? <ActionFeedbackBanner message={feedbackMessage} /> : null}
 
-      <TableShell
-        title="환불 요청 목록"
-        description="검토 대기 건을 선택하면 아래에서 승인 또는 반려를 진행할 수 있습니다."
-        columns={["요청 ID", "고객", "상태", "금액", "요청일", "작업"]}
-      >
-        {rows.map((row) => {
-          const statusMeta = refundStatusMeta[row.refund.status];
+      {rows.length > 0 ? (
+        <TableShell
+          title="환불 요청 목록"
+          description="검토 대기 건을 선택하면 아래에서 승인 또는 반려를 진행할 수 있습니다."
+          columns={["요청 ID", "고객", "상태", "금액", "요청일", "작업"]}
+        >
+          {rows.map((row) => {
+            const statusMeta = refundStatusMeta[row.refund.status];
 
-          return (
-            <tr key={row.refund.id} className="border-t border-slate-200">
-              <td className="px-6 py-4 text-sm font-medium text-slate-950">
-                {row.refund.id}
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                {row.customer?.name ?? "고객 미확인"}
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                <StatusBadge label={statusMeta.label} tone={statusMeta.tone} />
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                {formatCurrency(row.refund.amount)}
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                {formatDate(row.refund.requestedAt)}
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedRefundId(row.refund.id);
-                    setDecision(null);
-                    setReviewComment(row.refund.reviewComment ?? "");
-                  }}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                >
-                  검토 열기
-                </button>
-              </td>
-            </tr>
-          );
-        })}
-      </TableShell>
+            return (
+              <tr key={row.refund.id} className="border-t border-slate-200">
+                <td className="px-6 py-4 text-sm font-medium text-slate-950">
+                  {row.refund.id}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  {row.customer?.name ?? "고객 미확인"}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  <StatusBadge label={statusMeta.label} tone={statusMeta.tone} />
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  {formatCurrency(row.refund.amount)}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  {formatDate(row.refund.requestedAt)}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRefundId(row.refund.id);
+                      setDecision(null);
+                      setReviewComment(row.refund.reviewComment ?? "");
+                    }}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    검토 열기
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </TableShell>
+      ) : (
+        <EmptyState
+          title="검토할 환불 요청이 없습니다"
+          description="새 환불 요청이 들어오면 이 화면에서 승인 또는 반려 흐름을 진행할 수 있습니다."
+        />
+      )}
 
       {selectedRow ? (
         <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
@@ -290,6 +309,14 @@ export function RefundReviewBoard({
           </article>
         </section>
       ) : null}
+
+      <ActionActivityFeed
+        title="환불 처리 로그"
+        description="목업 감사 이벤트와 이번 세션의 환불 검토 결과를 함께 보여줍니다."
+        emptyTitle="아직 기록된 환불 처리 이력이 없습니다"
+        emptyDescription="환불 요청을 승인하거나 반려하면 최근 처리 이력이 이곳에 추가됩니다."
+        items={activityItems}
+      />
     </main>
   );
 }

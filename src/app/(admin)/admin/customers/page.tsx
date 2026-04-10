@@ -1,5 +1,6 @@
 import { SubscriptionStatusWorkbench } from "@/features/customers/components/subscription-status-workbench";
 import {
+  auditEvents,
   customers,
   payments,
   plans,
@@ -9,6 +10,7 @@ import {
 export default function AdminCustomersPage() {
   return (
     <SubscriptionStatusWorkbench
+      auditEvents={auditEvents}
       customers={customers}
       plans={plans}
       subscriptions={subscriptions}

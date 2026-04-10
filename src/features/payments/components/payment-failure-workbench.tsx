@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
+import { ActionFeedbackBanner } from "@/components/shared/action-feedback-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -9,9 +11,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
 import { paymentStatusMeta } from "@/lib/domain-meta";
 import { formatCurrency, formatDate } from "@/lib/format";
-import type { Customer, Payment } from "@/types/domain";
+import { mapAuditEventsToActivityItems } from "@/lib/workflow-activity";
+import type { AuditEvent, Customer, Payment } from "@/types/domain";
 
 type PaymentFailureWorkbenchProps = {
+  auditEvents: AuditEvent[];
   customers: Customer[];
   payments: Payment[];
 };
@@ -19,6 +23,7 @@ type PaymentFailureWorkbenchProps = {
 type PaymentAction = "mark_pending" | "mark_paid" | "mark_failed" | null;
 
 export function PaymentFailureWorkbench({
+  auditEvents,
   customers,
   payments,
 }: PaymentFailureWorkbenchProps) {
@@ -30,6 +35,11 @@ export function PaymentFailureWorkbench({
   );
   const [pendingAction, setPendingAction] = useState<PaymentAction>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [activityItems, setActivityItems] = useState(() =>
+    mapAuditEventsToActivityItems(
+      auditEvents.filter((event) => event.entityType === "payment"),
+    ),
+  );
 
   const rows = localPayments
     .toSorted((a, b) => b.attemptedAt.localeCompare(a.attemptedAt))
@@ -56,12 +66,16 @@ export function PaymentFailureWorkbench({
       return;
     }
 
+    const now = new Date().toISOString();
     const targetStatus =
       pendingAction === "mark_pending"
         ? "pending"
         : pendingAction === "mark_paid"
           ? "paid"
           : "failed";
+    const summary = `${selectedRow.payment.id} 결제 건을 ${
+      paymentStatusMeta[targetStatus].label
+    } 상태로 업데이트했습니다.`;
 
     setLocalPayments((current) =>
       current.map((payment) =>
@@ -71,11 +85,16 @@ export function PaymentFailureWorkbench({
       ),
     );
 
-    setFeedbackMessage(
-      `${selectedRow.payment.id} 결제 건을 ${
-        paymentStatusMeta[targetStatus].label
-      } 상태로 업데이트했습니다.`,
-    );
+    setFeedbackMessage(summary);
+    setActivityItems((current) => [
+      {
+        id: `payment-${selectedRow.payment.id}-${now}`,
+        occurredAt: now,
+        summary,
+        detail: `payment · ${selectedRow.payment.id} · ${selectedRow.customer?.name ?? "고객 미확인"}`,
+      },
+      ...current,
+    ]);
     setPendingAction(null);
   }
 
@@ -105,14 +124,7 @@ export function PaymentFailureWorkbench({
         />
       </section>
 
-      {feedbackMessage ? (
-        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-          <p className="text-sm font-semibold text-emerald-700">처리 완료</p>
-          <p className="mt-2 text-sm leading-6 text-emerald-700">
-            {feedbackMessage}
-          </p>
-        </section>
-      ) : null}
+      {feedbackMessage ? <ActionFeedbackBanner message={feedbackMessage} /> : null}
 
       <TableShell
         title="우선 대응 결제"
@@ -277,6 +289,14 @@ export function PaymentFailureWorkbench({
           </article>
         </section>
       ) : null}
+
+      <ActionActivityFeed
+        title="결제 대응 로그"
+        description="우선 대응 목록의 기존 감사 이벤트와 이번 세션에서 처리한 결제 액션을 함께 확인할 수 있습니다."
+        emptyTitle="아직 기록된 결제 대응 이력이 없습니다"
+        emptyDescription="실패 결제에 액션을 적용하면 최근 처리 이력이 이곳에 추가됩니다."
+        items={activityItems}
+      />
     </main>
   );
 }

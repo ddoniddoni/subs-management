@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
+import { ActionFeedbackBanner } from "@/components/shared/action-feedback-banner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -11,7 +14,9 @@ import {
   subscriptionStatusMeta,
 } from "@/lib/domain-meta";
 import { formatDate } from "@/lib/format";
+import { mapAuditEventsToActivityItems } from "@/lib/workflow-activity";
 import type {
+  AuditEvent,
   Customer,
   Payment,
   Plan,
@@ -20,6 +25,7 @@ import type {
 } from "@/types/domain";
 
 type SubscriptionStatusWorkbenchProps = {
+  auditEvents: AuditEvent[];
   customers: Customer[];
   plans: Plan[];
   subscriptions: Subscription[];
@@ -96,6 +102,7 @@ const transitionOptions: Record<SubscriptionStatus, TransitionOption[]> = {
 };
 
 export function SubscriptionStatusWorkbench({
+  auditEvents,
   customers,
   plans,
   subscriptions,
@@ -107,6 +114,11 @@ export function SubscriptionStatusWorkbench({
   );
   const [nextStatus, setNextStatus] = useState<SubscriptionStatus | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [activityItems, setActivityItems] = useState(() =>
+    mapAuditEventsToActivityItems(
+      auditEvents.filter((event) => event.entityType === "subscription"),
+    ),
+  );
 
   const rows = localSubscriptions.map((subscription) => {
     const customer = customers.find((item) => item.id === subscription.customerId);
@@ -142,7 +154,11 @@ export function SubscriptionStatusWorkbench({
     }
 
     const previousStatus = selectedRow.subscription.status;
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10);
+    const summary = `${selectedRow.customer?.name ?? "고객"}의 구독 상태를 ${
+      subscriptionStatusMeta[previousStatus].label
+    }에서 ${subscriptionStatusMeta[nextStatus].label}(으)로 변경했습니다.`;
 
     setLocalSubscriptions((current) =>
       current.map((subscription) =>
@@ -159,11 +175,16 @@ export function SubscriptionStatusWorkbench({
       ),
     );
 
-    setFeedbackMessage(
-      `${selectedRow.customer?.name ?? "고객"}의 구독 상태를 ${
-        subscriptionStatusMeta[previousStatus].label
-      }에서 ${subscriptionStatusMeta[nextStatus].label}(으)로 변경했습니다.`,
-    );
+    setFeedbackMessage(summary);
+    setActivityItems((current) => [
+      {
+        id: `subscription-${selectedRow.subscription.id}-${now}`,
+        occurredAt: now,
+        summary,
+        detail: `subscription · ${selectedRow.subscription.id}`,
+      },
+      ...current,
+    ]);
     setNextStatus(null);
   }
 
@@ -193,59 +214,62 @@ export function SubscriptionStatusWorkbench({
         />
       </section>
 
-      {feedbackMessage ? (
-        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-          <p className="text-sm font-semibold text-emerald-700">처리 완료</p>
-          <p className="mt-2 text-sm leading-6 text-emerald-700">
-            {feedbackMessage}
-          </p>
-        </section>
-      ) : null}
+      {feedbackMessage ? <ActionFeedbackBanner message={feedbackMessage} /> : null}
 
-      <TableShell
-        title="고객 구독 목록"
-        description="상태를 변경할 고객을 선택하면 아래에서 전환 가능한 상태와 확인 단계를 볼 수 있습니다."
-        columns={["고객명", "플랜", "현재 상태", "최근 결제", "작업"]}
-      >
-        {rows.map((row) => {
-          const subscriptionMeta = subscriptionStatusMeta[row.subscription.status];
-          const paymentMeta = row.latestPayment
-            ? paymentStatusMeta[row.latestPayment.status]
-            : { label: "결제 없음", tone: "neutral" as const };
+      {rows.length > 0 ? (
+        <TableShell
+          title="고객 구독 목록"
+          description="상태를 변경할 고객을 선택하면 아래에서 전환 가능한 상태와 확인 단계를 볼 수 있습니다."
+          columns={["고객명", "플랜", "현재 상태", "최근 결제", "작업"]}
+        >
+          {rows.map((row) => {
+            const subscriptionMeta = subscriptionStatusMeta[row.subscription.status];
+            const paymentMeta = row.latestPayment
+              ? paymentStatusMeta[row.latestPayment.status]
+              : { label: "결제 없음", tone: "neutral" as const };
 
-          return (
-            <tr key={row.subscription.id} className="border-t border-slate-200">
-              <td className="px-6 py-4 text-sm font-medium text-slate-950">
-                {row.customer?.name ?? "미확인 고객"}
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                {row.plan?.name ?? "플랜 미정"}
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                <StatusBadge
-                  label={subscriptionMeta.label}
-                  tone={subscriptionMeta.tone}
-                />
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                <StatusBadge label={paymentMeta.label} tone={paymentMeta.tone} />
-              </td>
-              <td className="px-6 py-4 text-sm text-slate-600">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedSubscriptionId(row.subscription.id);
-                    setNextStatus(null);
-                  }}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                >
-                  상태 변경
-                </button>
-              </td>
-            </tr>
-          );
-        })}
-      </TableShell>
+            return (
+              <tr key={row.subscription.id} className="border-t border-slate-200">
+                <td className="px-6 py-4 text-sm font-medium text-slate-950">
+                  {row.customer?.name ?? "미확인 고객"}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  {row.plan?.name ?? "플랜 미정"}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  <StatusBadge
+                    label={subscriptionMeta.label}
+                    tone={subscriptionMeta.tone}
+                  />
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  <StatusBadge
+                    label={paymentMeta.label}
+                    tone={paymentMeta.tone}
+                  />
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSubscriptionId(row.subscription.id);
+                      setNextStatus(null);
+                    }}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    상태 변경
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </TableShell>
+      ) : (
+        <EmptyState
+          title="표시할 구독이 없습니다"
+          description="구독 데이터가 준비되면 이 화면에서 상태 변경 워크플로우를 진행할 수 있습니다."
+        />
+      )}
 
       {selectedRow ? (
         <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
@@ -356,6 +380,14 @@ export function SubscriptionStatusWorkbench({
           </article>
         </section>
       ) : null}
+
+      <ActionActivityFeed
+        title="구독 상태 변경 로그"
+        description="목업 감사 이벤트와 이번 세션에서 처리한 상태 변경을 함께 보여줍니다."
+        emptyTitle="아직 기록된 상태 변경이 없습니다"
+        emptyDescription="구독 상태를 변경하면 여기에서 최근 처리 이력을 바로 확인할 수 있습니다."
+        items={activityItems}
+      />
     </main>
   );
 }
