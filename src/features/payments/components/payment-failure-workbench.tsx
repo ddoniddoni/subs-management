@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
@@ -140,7 +141,16 @@ export function PaymentFailureWorkbench({
                 {row.payment.id}
               </td>
               <td className="px-6 py-4 text-sm text-slate-600">
-                {row.customer?.name ?? "고객 미확인"}
+                {row.customer ? (
+                  <Link
+                    href={`/admin/customers/${row.customer.id}`}
+                    className="font-medium text-slate-950 transition hover:text-slate-700 hover:underline"
+                  >
+                    {row.customer.name}
+                  </Link>
+                ) : (
+                  "고객 미확인"
+                )}
               </td>
               <td className="px-6 py-4 text-sm text-slate-600">
                 <StatusBadge label={statusMeta.label} tone={statusMeta.tone} />
@@ -186,6 +196,14 @@ export function PaymentFailureWorkbench({
               {selectedRow.customer?.name ?? "고객 미확인"} ·{" "}
               {selectedRow.payment.methodLabel}
             </p>
+            {selectedRow.customer ? (
+              <Link
+                href={`/admin/customers/${selectedRow.customer.id}`}
+                className="mt-4 inline-flex text-sm font-medium text-slate-700 transition hover:text-slate-950 hover:underline"
+              >
+                고객 상세 보기
+              </Link>
+            ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
               <StatusBadge
