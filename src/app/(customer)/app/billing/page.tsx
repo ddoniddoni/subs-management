@@ -1,67 +1,45 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { TableShell } from "@/components/ui/table-shell";
-import { paymentStatusMeta } from "@/lib/domain-meta";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { BillingHistoryWorkbench } from "@/features/customer-account/components/billing-history-workbench";
+import { getCustomerBillingSnapshot } from "@/features/customer-account/lib/customer-account";
 import {
   currentCustomerId,
+  customers,
   invoices,
   payments,
+  refunds,
 } from "@/mocks/subscription-data";
 
 export default function BillingPage() {
-  const billingRows = invoices
-    .filter((invoice) => {
-      const payment = payments.find((item) => item.invoiceId === invoice.id);
-      return payment?.customerId === currentCustomerId;
-    })
-    .map((invoice) => {
-      const payment = payments.find((item) => item.invoiceId === invoice.id);
-      const statusMeta = paymentStatusMeta[invoice.paymentStatus];
+  const snapshot = getCustomerBillingSnapshot({
+    customerId: currentCustomerId,
+    customers,
+    invoices,
+    payments,
+    refunds,
+  });
 
-      return {
-        invoiceNumber: invoice.number,
-        amount: formatCurrency(invoice.amount),
-        statusMeta,
-        issuedAt: formatDate(invoice.issuedAt),
-        methodLabel: payment?.methodLabel ?? "수단 미확인",
-      };
-    });
+  if (!snapshot) {
+    return (
+      <main className="flex flex-col gap-10">
+        <ErrorState
+          title="결제 내역을 불러올 수 없습니다"
+          description="현재 고객 세션에 연결된 청구 데이터가 없어 결제 내역 화면을 구성하지 못했습니다."
+        />
+      </main>
+    );
+  }
 
-  return (
-    <main className="flex flex-col gap-10">
-      <PageHeader
-        eyebrow="고객 계정"
-        title="결제 내역"
-        description="청구서 번호, 결제 수단, 처리 상태를 한눈에 확인할 수 있도록 실제 목업 데이터를 기반으로 구성한 결제 내역 화면입니다."
-      />
+  if (snapshot.rows.length === 0) {
+    return (
+      <main className="flex flex-col gap-10">
+        <EmptyState
+          title="표시할 결제 이력이 없습니다"
+          description="첫 결제가 완료되면 이 화면에서 청구 번호, 결제 상태, 결제 수단을 함께 확인할 수 있습니다."
+        />
+      </main>
+    );
+  }
 
-      <TableShell
-        title="최근 청구 내역"
-        description="결제 성공, 환불 처리, 실패 건이 함께 보이도록 구성해 고객과 운영팀 모두 같은 맥락을 확인할 수 있게 합니다."
-        columns={["청구서", "금액", "상태", "청구일", "결제 수단"]}
-      >
-        {billingRows.map((row) => (
-          <tr key={row.invoiceNumber} className="border-t border-slate-200">
-            <td className="px-6 py-4 text-sm font-medium text-slate-950">
-              {row.invoiceNumber}
-            </td>
-            <td className="px-6 py-4 text-sm text-slate-600">{row.amount}</td>
-            <td className="px-6 py-4 text-sm text-slate-600">
-              <StatusBadge
-                label={row.statusMeta.label}
-                tone={row.statusMeta.tone}
-              />
-            </td>
-            <td className="px-6 py-4 text-sm text-slate-600">
-              {row.issuedAt}
-            </td>
-            <td className="px-6 py-4 text-sm text-slate-600">
-              {row.methodLabel}
-            </td>
-          </tr>
-        ))}
-      </TableShell>
-    </main>
-  );
+  return <BillingHistoryWorkbench snapshot={snapshot} />;
 }
