@@ -36,6 +36,7 @@
 - 상호작용이 필요 없는 경우에는 **서버 컴포넌트**를 우선합니다.
 - 브라우저 API 사용, 로컬 상태, 사용자 인터랙션이 필요한 경우에만 **클라이언트 컴포넌트**를 사용합니다.
 - 패키지 매니저가 정해져 있지 않다면 **npm**을 우선합니다.
+- PowerShell 환경에서 스크립트 실행 이슈가 있으면 `npm` 대신 `npm.cmd`를 사용합니다.
 - 이미 lockfile이 있다면 기존 패키지 매니저를 따릅니다.
 - 스타일링과 컴포넌트 시스템은 일관되게 유지합니다.
 - 특별한 이유 없이 여러 UI 시스템을 섞지 않습니다.
@@ -154,6 +155,27 @@
   - 검증 방법
 - 한 번에 크게 갈아엎는 방식보다, 작고 리뷰하기 쉬운 변경을 선호합니다.
 - 사소한 모호함 때문에 멈추지 말고, 근거 있는 가정을 세운 뒤 문서에 남깁니다.
+
+### 단계별(step) 작업 규칙
+- 이 프로젝트는 `step/NN-<slug>` 브랜치 단위로 작업합니다.
+- 새 step을 시작하기 전에 항상 직전 step 브랜치를 먼저 `develop`에 머지하고 원격 `develop`까지 푸시합니다.
+- 새 step은 항상 최신 `develop`에서 새 브랜치를 따서 시작합니다.
+- 각 step은 구현 전에 아래 두 문서를 반드시 먼저 만듭니다.
+  - `docs/execplans/step-NN-<slug>.md`
+  - `docs/steps/bootstrap-step-NN-<slug>.md`
+- `docs/execplans` 문서와 `docs/steps` 문서는 같은 step 번호와 slug를 사용해 짝을 맞춥니다.
+- step 구현이 끝나면 아래 순서대로 마무리합니다.
+  - `npm.cmd run lint`
+  - `npm.cmd run typecheck`
+  - `npm.cmd run test`
+  - `npm.cmd run build`
+  - Conventional Commit 메시지로 커밋
+  - step 브랜치를 원격에 푸시
+- 다음 step으로 바로 넘어갈 때도 위 흐름을 반복합니다.
+  - 현재 step 브랜치를 `develop`에 머지
+  - 원격 `develop` 푸시
+  - 새 `step/NN-<slug>` 브랜치 생성
+  - 계획서 2종 작성 후 구현 시작
 
 ## 완료 기준
 아래 조건을 모두 만족해야 작업이 완료된 것으로 봅니다.

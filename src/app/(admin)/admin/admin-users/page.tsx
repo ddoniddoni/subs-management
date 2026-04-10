@@ -1,16 +1,36 @@
-import { RoutePlaceholder } from "@/components/shared/route-placeholder";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { AdminAccessWorkbench } from "@/features/admin-users/components/admin-access-workbench";
+import { getAdminAccessSnapshot } from "@/features/admin-users/lib/admin-access";
+import { adminUsers, auditEvents } from "@/mocks/subscription-data";
 
 export default function AdminUsersPage() {
-  return (
-    <RoutePlaceholder
-      eyebrow="관리자 운영"
-      title="관리자 사용자 페이지 골격"
-      description="이 화면은 내부 운영자 목록, 역할, 권한 가시성을 보여주는 관리자 화면이 됩니다."
-      bullets={[
-        "역할 배지와 권한 요약은 이후 단계에서 추가됩니다.",
-        "초기 제품 스토리에서는 읽기 전용 버전만으로도 충분합니다.",
-        "이제 역할 기반 내비게이션을 다음 단계에서 자연스럽게 얹을 수 있습니다.",
-      ]}
-    />
-  );
+  if (adminUsers.length === 0) {
+    return (
+      <main className="flex flex-col gap-10">
+        <EmptyState
+          title="운영자 계정이 아직 없습니다"
+          description="관리자 계정이 연결되면 역할별 접근 제어와 감사 추적 구성을 이 화면에서 점검할 수 있습니다."
+        />
+      </main>
+    );
+  }
+
+  const snapshot = getAdminAccessSnapshot({
+    adminUsers,
+    auditEvents,
+  });
+
+  if (!snapshot) {
+    return (
+      <main className="flex flex-col gap-10">
+        <ErrorState
+          title="관리자 권한 화면을 구성할 수 없습니다"
+          description="운영자 데이터 또는 접근 정책 구성이 올바르지 않아 권한 요약 화면을 렌더링하지 못했습니다."
+        />
+      </main>
+    );
+  }
+
+  return <AdminAccessWorkbench snapshot={snapshot} />;
 }
