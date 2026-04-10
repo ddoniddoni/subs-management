@@ -20,11 +20,13 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
               구독 운영 콘솔
             </Link>
             <p className="mt-1 text-sm text-slate-600">
-              요금제 탐색, 체크아웃, 계정 관리를 위한 고객용 제품 화면입니다.
+              플랜 탐색, checkout, 구독 상태 확인까지 이어지는 고객용 제품 흐름입니다.
             </p>
           </div>
 
-          <nav aria-label="고객 내비게이션">
+          <nav
+            aria-label="고객 네비게이션"
+          >
             <ul className="flex flex-wrap gap-2">
               {customerNavigationItems.map((item) => (
                 <li key={item.href}>
