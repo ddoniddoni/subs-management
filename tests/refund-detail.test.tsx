@@ -71,6 +71,9 @@ describe("RefundDetailView", () => {
     expect(
       screen.getByRole("link", { name: "고객 상세 보기" }),
     ).toHaveAttribute("href", "/admin/customers/cust_001");
+    expect(
+      screen.getByRole("link", { name: "결제 대응 화면 열기" }),
+    ).toHaveAttribute("href", "/admin/payments/pay_002");
     expect(screen.getByText("중복 결제 건 환불을 승인했습니다.")).toBeInTheDocument();
   });
 });

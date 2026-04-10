@@ -83,7 +83,7 @@ export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
             ) : null}
             {payment ? (
               <Link
-                href="/admin/payments"
+                href={`/admin/payments/${payment.id}`}
                 className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 결제 대응 화면 열기

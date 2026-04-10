@@ -29,6 +29,12 @@ describe("audit log helpers", () => {
 
     expect(records[0]?.summary).toBe("고객 유지 대응 메모를 업데이트했습니다.");
     expect(records[0]?.href).toBe("/admin/customers/cust_001");
+    expect(records.find((record) => record.targetId === "pay_004")?.href).toBe(
+      "/admin/payments/pay_004",
+    );
+    expect(records.find((record) => record.targetId === "refund_001")?.href).toBe(
+      "/admin/refunds/refund_001",
+    );
     expect(records.find((record) => record.targetId === "coupon_002")?.href).toBe(
       "/admin/customers/cust_002",
     );
