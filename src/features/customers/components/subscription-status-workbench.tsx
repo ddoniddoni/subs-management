@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
@@ -231,7 +232,16 @@ export function SubscriptionStatusWorkbench({
             return (
               <tr key={row.subscription.id} className="border-t border-slate-200">
                 <td className="px-6 py-4 text-sm font-medium text-slate-950">
-                  {row.customer?.name ?? "미확인 고객"}
+                  {row.customer ? (
+                    <Link
+                      href={`/admin/customers/${row.customer.id}`}
+                      className="transition hover:text-slate-700 hover:underline"
+                    >
+                      {row.customer.name}
+                    </Link>
+                  ) : (
+                    "미확인 고객"
+                  )}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
                   {row.plan?.name ?? "플랜 미정"}
@@ -249,16 +259,26 @@ export function SubscriptionStatusWorkbench({
                   />
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedSubscriptionId(row.subscription.id);
-                      setNextStatus(null);
-                    }}
-                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                  >
-                    상태 변경
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSubscriptionId(row.subscription.id);
+                        setNextStatus(null);
+                      }}
+                      className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                    >
+                      상태 변경
+                    </button>
+                    {row.customer ? (
+                      <Link
+                        href={`/admin/customers/${row.customer.id}`}
+                        className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                      >
+                        상세 보기
+                      </Link>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             );
@@ -283,6 +303,14 @@ export function SubscriptionStatusWorkbench({
             <p className="mt-2 text-sm text-slate-600">
               {selectedRow.customer?.email ?? "이메일 미확인"}
             </p>
+            {selectedRow.customer ? (
+              <Link
+                href={`/admin/customers/${selectedRow.customer.id}`}
+                className="mt-4 inline-flex text-sm font-medium text-slate-700 transition hover:text-slate-950 hover:underline"
+              >
+                고객 상세 보기
+              </Link>
+            ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
               <StatusBadge
