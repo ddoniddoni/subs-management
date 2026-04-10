@@ -298,6 +298,24 @@ export const adminUsers: AdminUser[] = [
 
 export const auditEvents: AuditEvent[] = [
   {
+    id: "audit_004",
+    actorAdminUserId: "admin_003",
+    entityType: "customer",
+    action: "update_customer_note",
+    targetId: "cust_001",
+    summary: "고객 유지 대응 메모를 업데이트했습니다.",
+    createdAt: "2026-04-16T11:10:00+09:00",
+  },
+  {
+    id: "audit_005",
+    actorAdminUserId: "admin_001",
+    entityType: "coupon",
+    action: "assign_coupon",
+    targetId: "coupon_002",
+    summary: "이도윤 고객에게 유지 보상 쿠폰을 할당했습니다.",
+    createdAt: "2026-04-14T15:20:00+09:00",
+  },
+  {
     id: "audit_001",
     actorAdminUserId: "admin_002",
     entityType: "refund",
