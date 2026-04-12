@@ -1,4 +1,18 @@
-import { adminRoleLabel, couponStatusMeta, paymentStatusMeta, refundStatusMeta, subscriptionStatusMeta } from "@/lib/domain-meta";
+import {
+  buildAdminDetailActivityItems,
+  findSubscriptionWithPlanByCustomerId,
+  sortCouponsByExpiresAt,
+  sortPaymentsByAttemptedAt,
+  sortRefundsByRequestedAt,
+  type AdminDetailActivityItem,
+  type SubscriptionWithPlan,
+} from "@/lib/admin-detail-composition";
+import {
+  couponStatusMeta,
+  paymentStatusMeta,
+  refundStatusMeta,
+  subscriptionStatusMeta,
+} from "@/lib/domain-meta";
 import { formatCurrency } from "@/lib/format";
 import type {
   AdminUser,
@@ -24,12 +38,7 @@ type CustomerDetailSnapshotInput = {
 };
 
 type CustomerDetailSnapshot = {
-  activityItems: {
-    actorLabel: string;
-    id: string;
-    occurredAt: string;
-    summary: string;
-  }[];
+  activityItems: AdminDetailActivityItem[];
   coupons: Coupon[];
   customer: Customer;
   payments: Payment[];
@@ -40,7 +49,7 @@ type CustomerDetailSnapshot = {
     totalPayments: string;
     unresolvedPaymentCount: string;
   };
-  subscription: (Subscription & { plan: Plan | null }) | null;
+  subscription: SubscriptionWithPlan | null;
 };
 
 export function getCustomerDetailSnapshot({
@@ -60,24 +69,20 @@ export function getCustomerDetailSnapshot({
     return null;
   }
 
-  const subscriptionRecord =
-    subscriptions.find((item) => item.customerId === customer.id) ?? null;
-  const subscription = subscriptionRecord
-    ? {
-        ...subscriptionRecord,
-        plan: plans.find((plan) => plan.id === subscriptionRecord.planId) ?? null,
-      }
-    : null;
-
-  const relatedPayments = payments
-    .filter((item) => item.customerId === customer.id)
-    .toSorted((a, b) => b.attemptedAt.localeCompare(a.attemptedAt));
-  const relatedRefunds = refunds
-    .filter((item) => item.customerId === customer.id)
-    .toSorted((a, b) => b.requestedAt.localeCompare(a.requestedAt));
-  const relatedCoupons = coupons
-    .filter((item) => item.assignedCustomerId === customer.id)
-    .toSorted((a, b) => b.expiresAt.localeCompare(a.expiresAt));
+  const subscription = findSubscriptionWithPlanByCustomerId({
+    customerId: customer.id,
+    plans,
+    subscriptions,
+  });
+  const relatedPayments = sortPaymentsByAttemptedAt(
+    payments.filter((item) => item.customerId === customer.id),
+  );
+  const relatedRefunds = sortRefundsByRequestedAt(
+    refunds.filter((item) => item.customerId === customer.id),
+  );
+  const relatedCoupons = sortCouponsByExpiresAt(
+    coupons.filter((item) => item.assignedCustomerId === customer.id),
+  );
 
   const relatedTargetIds = new Set<string>([
     customer.id,
@@ -87,21 +92,11 @@ export function getCustomerDetailSnapshot({
     ...(subscription ? [subscription.id] : []),
   ]);
 
-  const relatedActivityItems = auditEvents
-    .filter((event) => relatedTargetIds.has(event.targetId))
-    .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((event) => {
-      const actor = adminUsers.find((item) => item.id === event.actorAdminUserId);
-
-      return {
-        id: event.id,
-        occurredAt: event.createdAt,
-        summary: event.summary,
-        actorLabel: actor
-          ? `${actor.name} · ${adminRoleLabel[actor.role]}`
-          : "관리자 정보 미확인",
-      };
-    });
+  const relatedActivityItems = buildAdminDetailActivityItems({
+    adminUsers,
+    auditEvents,
+    targetIds: relatedTargetIds,
+  });
 
   const totalPayments = relatedPayments
     .filter((item) => item.status === "paid" || item.status === "refunded")

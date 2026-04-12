@@ -3,13 +3,13 @@
 ## Snapshot
 
 - Date: 2026-04-12
-- Current branch: `step/19-admin-route-polish`
+- Current branch: `step/20-admin-data-composition`
 - Workspace status target: clean
-- `develop` status: merged through `step/18-subscription-ops-hardening`
-- step branch status: `step/19-admin-route-polish` is implemented, validated, and ready to push
-- `origin/develop` still represents the post-step-18 baseline until step 19 is merged
+- `develop` status: merged through `step/19-admin-route-polish`
+- step branch status: `step/20-admin-data-composition` is implemented, validated, and ready to push
+- `origin/develop` still represents the post-step-19 baseline until step 20 is merged
 
-## Completed Through Step 19
+## Completed Through Step 20
 
 - `step 01`: route foundation
 - `step 02`: layout navigation
@@ -30,38 +30,33 @@
 - `step 17`: subscription ops workbench
 - `step 18`: subscription ops hardening
 - `step 19`: admin route polish
+- `step 20`: admin data composition
 
-## Step 19 Summary
+## Step 20 Summary
 
-Polished admin route flow so customer, payment, refund, and subscription surfaces now share a common route-context header and deeper cross-links.
+Refactored repeated admin detail snapshot composition into shared helpers so customer, payment, and refund detail builders now reuse the same subscription enrichment, sorting, and activity-item mapping logic.
 
 Key files:
 
-- `docs/execplans/step-19-admin-route-polish.md`
-- `docs/steps/bootstrap-step-19-admin-route-polish.md`
-- `src/components/shared/admin-route-header.tsx`
-- `src/lib/admin-routes.ts`
-- `src/app/(admin)/admin/subscriptions/page.tsx`
-- `src/features/admin-home/lib/admin-command-center.ts`
-- `src/features/customers/components/customer-detail-view.tsx`
-- `src/features/customers/components/subscription-status-workbench.tsx`
-- `src/features/payments/components/payment-detail-view.tsx`
-- `src/features/refunds/components/refund-detail-view.tsx`
-- `tests/admin-command-center.test.tsx`
+- `docs/execplans/step-20-admin-data-composition.md`
+- `docs/steps/bootstrap-step-20-admin-data-composition.md`
+- `src/lib/admin-detail-composition.ts`
+- `src/features/customers/lib/customer-detail.ts`
+- `src/features/payments/lib/payment-detail.ts`
+- `src/features/refunds/lib/refund-detail.ts`
+- `tests/admin-detail-composition.test.ts`
 - `tests/customer-detail.test.tsx`
 - `tests/payment-detail.test.tsx`
 - `tests/refund-detail.test.tsx`
-- `tests/subscription-status-workbench.test.tsx`
 
 Included changes:
 
-- added a shared admin route header with breadcrumb and quick-link support
-- wired customer, payment, and refund detail pages into the shared route context pattern
-- added focused subscription workbench entry with `/admin/subscriptions?focus=<id>`
-- updated command center watchlist links to open a focused subscription from scheduled-cancel items
-- expanded tests to cover breadcrumbs, quick links, and cross-route entry behavior
+- added shared helpers for subscription enrichment, payment/refund/coupon sorting, and detail activity item mapping
+- refactored customer, payment, and refund snapshot builders to use the shared helpers
+- preserved existing detail page behavior while reducing repeated composition code
+- added helper-focused tests and kept detail snapshot tests green
 
-Validation completed for step 19:
+Validation completed for step 20:
 
 - `npm.cmd run lint`
 - `npm.cmd run typecheck`
@@ -73,14 +68,16 @@ Relevant commits:
 - `fc73be9` `feat(admin): add subscription ops workbench`
 - `b9bb1a3` `docs(repo): add codex handoff`
 - `ae5b43a` `feat(admin): harden subscription ops workbench`
-- step 19 commit can be read from `git log --oneline --decorate -6` on this branch
+- `b002784` `feat(admin): polish admin route context`
+- step 20 commit can be read from `git log --oneline --decorate -6` on this branch
 
 ## Remote Status
 
-- `origin/develop` includes step 18, not step 19 yet
+- `origin/develop` includes step 19, not step 20 yet
 - `origin/step/17-subscription-ops-workbench` already contains the step 17 branch history
 - `origin/step/18-subscription-ops-hardening` contains the previous step history
-- `origin/step/19-admin-route-polish` should be pushed after the current commit
+- `origin/step/19-admin-route-polish` contains the previous step history
+- `origin/step/20-admin-data-composition` should be pushed after the current commit
 
 ## Resume Checklist
 
@@ -95,7 +92,7 @@ Relevant commits:
 
 If continuing with a new step:
 
-1. merge `step/19-admin-route-polish` into latest `develop`
+1. merge `step/20-admin-data-composition` into latest `develop`
 2. create both planning docs before implementation
-3. branch `step/20-<slug>` from updated `develop`
+3. branch `step/21-<slug>` from updated `develop`
 4. implement, validate, commit, and push
