@@ -109,7 +109,7 @@ export function PricingPlanExplorer({
                 {plan.highlightFeatures.map((feature) => (
                   <li
                     key={feature}
-                    className="rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700"
+                    className="theme-glass-panel rounded-2xl border px-4 py-3 text-sm font-medium text-slate-700"
                   >
                     {feature}
                   </li>

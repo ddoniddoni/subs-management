@@ -164,13 +164,13 @@ export function CheckoutWorkbench({
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <article className="rounded-3xl border border-white/70 bg-white/90 p-5">
+              <article className="theme-glass-panel rounded-3xl border p-5">
                 <p className="text-sm font-medium text-slate-500">주문 번호</p>
                 <p className="mt-3 text-2xl font-semibold text-slate-950">
                   {orderReference}
                 </p>
               </article>
-              <article className="rounded-3xl border border-white/70 bg-white/90 p-5">
+              <article className="theme-glass-panel rounded-3xl border p-5">
                 <p className="text-sm font-medium text-slate-500">첫 청구 금액</p>
                 <p className="mt-3 text-2xl font-semibold text-slate-950">
                   {formatCurrency(checkoutSummary.totalAmount)}

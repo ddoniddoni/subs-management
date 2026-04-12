@@ -64,7 +64,7 @@ export function CustomerLandingPageView({
           </div>
 
           {featuredPlan ? (
-            <aside className="rounded-[2rem] border border-teal-200 bg-[linear-gradient(135deg,#f0fdfa,white_50%,#ecfeff)] p-6">
+            <aside className="theme-spotlight-panel rounded-[2rem] border border-teal-200 p-6">
               <div className="flex flex-wrap items-center gap-3">
                 <StatusBadge
                   label={featuredPlan.badgeLabel}
@@ -82,7 +82,7 @@ export function CustomerLandingPageView({
                 {featuredPlan.description}
               </p>
 
-              <div className="mt-6 rounded-3xl border border-white/70 bg-white/80 p-5">
+              <div className="theme-glass-panel mt-6 rounded-3xl border p-5">
                 <p className="text-sm font-medium text-slate-500">가장 많이 시작하는 조합</p>
                 <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
                   {formatCurrency(featuredPlan.monthlyPrice)}
@@ -99,7 +99,7 @@ export function CustomerLandingPageView({
                 {featuredPlan.highlightFeatures.map((feature) => (
                   <li
                     key={feature}
-                    className="rounded-2xl border border-teal-100 bg-white/90 px-4 py-3 text-sm font-medium text-slate-700"
+                    className="theme-glass-panel rounded-2xl border px-4 py-3 text-sm font-medium text-slate-700"
                   >
                     {feature}
                   </li>

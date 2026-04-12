@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ErrorState } from "@/components/ui/error-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { adminRoleLabel } from "@/lib/domain-meta";
@@ -110,6 +111,7 @@ export function AdminAccessShell({
               </div>
 
               <div className="flex max-w-xl flex-col gap-3">
+                <ThemeToggle />
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Mock session
                 </p>

@@ -6,8 +6,16 @@
 - Current branch: `step/20-admin-data-composition`
 - Workspace status target: clean
 - `develop` status: merged through `step/19-admin-route-polish`
-- step branch status: `step/20-admin-data-composition` is implemented, validated, and ready to push
+- step branch status: `step/20-admin-data-composition` contains the step 20 refactor plus a validated theme/contrast polish pass
 - `origin/develop` still represents the post-step-19 baseline until step 20 is merged
+
+## In-Progress Branch Addendum
+
+- Added `next-themes` `0.4.6` for persisted light, dark, and system theme switching.
+- Added shared theme toggle UI to both customer and admin layouts.
+- Extended `src/app/globals.css` with dark-mode utility remapping and stronger secondary action contrast.
+- Added theme-aware surface polish for customer acquisition cards and a focused `tests/theme-toggle.test.tsx`.
+- This addendum is intended to travel with the same step branch before merge to `develop`.
 
 ## Completed Through Step 20
 
@@ -77,7 +85,7 @@ Relevant commits:
 - `origin/step/17-subscription-ops-workbench` already contains the step 17 branch history
 - `origin/step/18-subscription-ops-hardening` contains the previous step history
 - `origin/step/19-admin-route-polish` contains the previous step history
-- `origin/step/20-admin-data-composition` should be pushed after the current commit
+- `origin/step/20-admin-data-composition` contains the branch history; confirm the latest commit after any follow-up push
 
 ## Resume Checklist
 
