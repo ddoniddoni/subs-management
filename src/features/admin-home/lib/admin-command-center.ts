@@ -1,4 +1,5 @@
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getAdminSubscriptionsHref } from "@/lib/admin-routes";
 import { mapAuditEventsToActivityItems } from "@/lib/workflow-activity";
 import type {
   AuditEvent,
@@ -175,7 +176,7 @@ export function getAdminCommandCenterSnapshot({
       description: `${subscription.seats}석 · ${
         subscription.cancelAt ? formatDate(subscription.cancelAt) : "취소 일정 미정"
       }까지 유지`,
-      href: `/admin/customers/${subscription.customerId}`,
+      href: getAdminSubscriptionsHref(subscription.id),
       tone: "info" as const,
     })),
   ];

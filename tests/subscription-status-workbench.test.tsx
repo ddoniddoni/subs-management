@@ -13,12 +13,13 @@ import {
   subscriptions,
 } from "@/mocks/subscription-data";
 
-function renderWorkbench() {
+function renderWorkbench(initialFocusSubscriptionId?: string) {
   render(
     <SubscriptionStatusWorkbench
       auditEvents={auditEvents}
       coupons={coupons}
       customers={customers}
+      initialFocusSubscriptionId={initialFocusSubscriptionId}
       payments={payments}
       plans={plans}
       refunds={refunds}
@@ -124,5 +125,15 @@ describe("SubscriptionStatusWorkbench", () => {
     expect(screen.getByText("subscription · sub_002 · 사유: 결제 실패 고객 확인 완료")).toBeInTheDocument();
     expect(screen.getByText("조건에 맞는 구독이 없습니다")).toBeInTheDocument();
     expectStatValue("활성 구독", "2건");
+  });
+
+  it("accepts an initial focus subscription id for cross-route entry", () => {
+    renderWorkbench("sub_002");
+
+    expect(
+      screen.getByRole("link", { name: /^이도윤 고객 상세/ }),
+    ).toHaveAttribute("href", "/admin/customers/cust_002");
+    expect(screen.getByText("pay_004")).toBeInTheDocument();
+    expect(screen.getByText("refund_002")).toBeInTheDocument();
   });
 });

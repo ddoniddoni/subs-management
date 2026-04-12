@@ -27,6 +27,11 @@ describe("getAdminCommandCenterSnapshot", () => {
     expect(snapshot?.headlineCards).toHaveLength(4);
     expect(snapshot?.priorityQueue[0]?.href).toBe("/admin/payments");
     expect(snapshot?.quickAccess).toHaveLength(4);
+    expect(
+      snapshot?.watchlist.some((item) =>
+        item.href.includes("/admin/subscriptions?focus="),
+      ),
+    ).toBe(true);
     expect(snapshot?.recentActivity.length).toBeGreaterThan(0);
   });
 
@@ -45,7 +50,7 @@ describe("getAdminCommandCenterSnapshot", () => {
 });
 
 describe("AdminCommandCenterView", () => {
-  it("renders the priority queue and quick access links", () => {
+  it("renders the priority queue, quick access, and watchlist links", () => {
     const snapshot = getAdminCommandCenterSnapshot({
       auditEvents,
       coupons,
@@ -67,6 +72,10 @@ describe("AdminCommandCenterView", () => {
     }
 
     for (const item of snapshot!.quickAccess) {
+      expect(hrefs).toContain(item.href);
+    }
+
+    for (const item of snapshot!.watchlist) {
       expect(hrefs).toContain(item.href);
     }
   });

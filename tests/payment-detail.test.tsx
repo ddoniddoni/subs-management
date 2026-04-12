@@ -73,12 +73,23 @@ describe("PaymentDetailView", () => {
 
     expect(screen.getByText("pay_002 결제 추적")).toBeInTheDocument();
     expect(screen.getAllByText("연결 환불").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "관리자 홈" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+    expect(screen.getByRole("link", { name: "결제" })).toHaveAttribute(
+      "href",
+      "/admin/payments",
+    );
     expect(
-      screen.getByRole("link", { name: "고객 상세 보기" }),
+      screen.getByRole("link", { name: /^고객 상세/ }),
     ).toHaveAttribute("href", "/admin/customers/cust_001");
     expect(
-      screen.getByRole("link", { name: "연결 환불 보기" }),
+      screen.getByRole("link", { name: /^관련 환불/ }),
     ).toHaveAttribute("href", "/admin/refunds/refund_001");
+    expect(
+      screen.getByRole("link", { name: /^구독 워크벤치/ }),
+    ).toHaveAttribute("href", "/admin/subscriptions?focus=sub_001");
     expect(screen.getByText("중복 결제 건 환불을 승인했습니다.")).toBeInTheDocument();
   });
 });

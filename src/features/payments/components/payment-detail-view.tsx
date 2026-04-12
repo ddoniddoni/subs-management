@@ -1,10 +1,11 @@
 import Link from "next/link";
 
+import { AdminRouteHeader } from "@/components/shared/admin-route-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
+import { getAdminSubscriptionsHref } from "@/lib/admin-routes";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 import {
@@ -21,16 +22,56 @@ type PaymentDetailViewProps = {
 export function PaymentDetailView({ snapshot }: PaymentDetailViewProps) {
   const { activityItems, customer, invoice, payment, refunds, stats, subscription } =
     snapshot;
+  const quickLinks = [
+    {
+      label: "결제 목록",
+      description: "최근 결제와 실패 결제 목록으로 돌아갑니다.",
+      href: "/admin/payments",
+    },
+    ...(customer
+      ? [
+          {
+            label: "고객 상세",
+            description: "결제가 발생한 고객 계정 흐름을 이어서 확인합니다.",
+            href: `/admin/customers/${customer.id}`,
+          },
+        ]
+      : []),
+    ...(refunds[0]
+      ? [
+          {
+            label: "관련 환불",
+            description: "이 결제와 연결된 가장 최근 환불 요청을 엽니다.",
+            href: `/admin/refunds/${refunds[0].id}`,
+          },
+        ]
+      : []),
+    ...(subscription
+      ? [
+          {
+            label: "구독 워크벤치",
+            description: "관련 구독을 초점 상태로 열어 상태 전환을 검토합니다.",
+            href: getAdminSubscriptionsHref(subscription.id),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <main className="flex flex-col gap-10">
-      <PageHeader
+      <AdminRouteHeader
+        breadcrumbs={[
+          { label: "관리자 홈", href: "/admin" },
+          { label: "결제", href: "/admin/payments" },
+          { label: payment.id },
+        ]}
         eyebrow="결제 상세"
         title={`${payment.id} 결제 추적`}
         description="결제 상태, 청구 맥락, 고객 정보, 연결 환불, 감사 이벤트를 한 화면에서 확인합니다."
+        quickLinks={quickLinks}
       />
 
-      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+      <section>
         <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
             결제 요약
@@ -72,36 +113,6 @@ export function PaymentDetailView({ snapshot }: PaymentDetailViewProps) {
               <dd className="mt-1">{stats.refundTotal}</dd>
             </div>
           </dl>
-        </article>
-
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-            관련 이동
-          </p>
-          <div className="mt-6 flex flex-col gap-3">
-            <Link
-              href="/admin/payments"
-              className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              결제 목록으로 돌아가기
-            </Link>
-            {customer ? (
-              <Link
-                href={`/admin/customers/${customer.id}`}
-                className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                고객 상세 보기
-              </Link>
-            ) : null}
-            {refunds[0] ? (
-              <Link
-                href={`/admin/refunds/${refunds[0].id}`}
-                className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                연결 환불 보기
-              </Link>
-            ) : null}
-          </div>
         </article>
       </section>
 

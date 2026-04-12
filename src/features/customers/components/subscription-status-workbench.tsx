@@ -5,8 +5,8 @@ import { startTransition, useDeferredValue, useState } from "react";
 
 import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
 import { ActionFeedbackBanner } from "@/components/shared/action-feedback-banner";
+import { AdminRouteHeader } from "@/components/shared/admin-route-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
@@ -46,6 +46,7 @@ type SubscriptionStatusWorkbenchProps = {
   auditEvents: AuditEvent[];
   coupons: Coupon[];
   customers: Customer[];
+  initialFocusSubscriptionId?: string;
   payments: Payment[];
   plans: Plan[];
   refunds: Refund[];
@@ -64,6 +65,7 @@ export function SubscriptionStatusWorkbench({
   auditEvents,
   coupons,
   customers,
+  initialFocusSubscriptionId,
   payments,
   plans,
   refunds,
@@ -71,7 +73,9 @@ export function SubscriptionStatusWorkbench({
 }: SubscriptionStatusWorkbenchProps) {
   const [localSubscriptions, setLocalSubscriptions] = useState(subscriptions);
   const [focusedSubscriptionId, setFocusedSubscriptionId] = useState(
-    subscriptions[0]?.id ?? "",
+    subscriptions.some((subscription) => subscription.id === initialFocusSubscriptionId)
+      ? initialFocusSubscriptionId ?? ""
+      : subscriptions[0]?.id ?? "",
   );
   const [nextStatus, setNextStatus] = useState<SubscriptionStatus | null>(null);
   const [changeReason, setChangeReason] = useState("");
@@ -123,6 +127,37 @@ export function SubscriptionStatusWorkbench({
   const transitionOptions = selectedSnapshot
     ? getSubscriptionTransitionOptions(selectedSnapshot.row.subscription.status)
     : [];
+  const workbenchQuickLinks = [
+    {
+      label: "운영 개요",
+      description: "우선 처리 건과 watchlist를 다시 확인합니다.",
+      href: "/admin",
+    },
+    {
+      label: "고객 목록",
+      description: "구독 대상 고객을 목록에서 다시 탐색합니다.",
+      href: "/admin/customers",
+    },
+    {
+      label: "결제 대응",
+      description: "실패 결제와 최근 결제 상세로 이동합니다.",
+      href: "/admin/payments",
+    },
+    {
+      label: "환불 검토",
+      description: "승인 대기 환불 보드와 상세 검토로 이동합니다.",
+      href: "/admin/refunds",
+    },
+    ...(selectedSnapshot
+      ? [
+          {
+            label: `${selectedSnapshot.row.customer.name} 고객 상세`,
+            description: "현재 선택한 구독의 고객 기록과 결제 이력을 확인합니다.",
+            href: `/admin/customers/${selectedSnapshot.row.customer.id}`,
+          },
+        ]
+      : []),
+  ];
 
   const activeCount = localSubscriptions.filter(
     (item) => item.status === "active",
@@ -225,10 +260,15 @@ export function SubscriptionStatusWorkbench({
 
   return (
     <main className="flex flex-col gap-10">
-      <PageHeader
+      <AdminRouteHeader
+        breadcrumbs={[
+          { label: "관리자 홈", href: "/admin" },
+          { label: "구독 운영" },
+        ]}
         eyebrow="관리자 운영"
         title="구독 상태 운영 워크벤치"
         description="구독 상태를 안전하게 변경하고, 결제 실패·환불 요청·보상 쿠폰 같은 주변 운영 맥락을 함께 보면서 판단하는 관리자 화면입니다."
+        quickLinks={workbenchQuickLinks}
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

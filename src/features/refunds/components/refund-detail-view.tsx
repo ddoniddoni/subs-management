@@ -1,9 +1,8 @@
-import Link from "next/link";
-
+import { AdminRouteHeader } from "@/components/shared/admin-route-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getAdminSubscriptionsHref } from "@/lib/admin-routes";
 import { formatDate, formatDateTime } from "@/lib/format";
 
 import { refundStatusMeta, subscriptionStatusMeta } from "../lib/refund-detail";
@@ -15,16 +14,56 @@ type RefundDetailViewProps = {
 
 export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
   const { activityItems, customer, payment, refund, stats, subscription } = snapshot;
+  const quickLinks = [
+    {
+      label: "환불 목록",
+      description: "환불 검토 보드와 최근 처리 목록으로 돌아갑니다.",
+      href: "/admin/refunds",
+    },
+    ...(payment
+      ? [
+          {
+            label: "결제 상세",
+            description: "환불과 연결된 원 결제 맥락을 다시 확인합니다.",
+            href: `/admin/payments/${payment.id}`,
+          },
+        ]
+      : []),
+    ...(customer
+      ? [
+          {
+            label: "고객 상세",
+            description: "고객 계정의 구독, 결제, 환불 흐름을 함께 확인합니다.",
+            href: `/admin/customers/${customer.id}`,
+          },
+        ]
+      : []),
+    ...(subscription
+      ? [
+          {
+            label: "구독 워크벤치",
+            description: "관련 구독을 초점 상태로 열어 운영 판단을 이어갑니다.",
+            href: getAdminSubscriptionsHref(subscription.id),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <main className="flex flex-col gap-10">
-      <PageHeader
+      <AdminRouteHeader
+        breadcrumbs={[
+          { label: "관리자 홈", href: "/admin" },
+          { label: "환불", href: "/admin/refunds" },
+          { label: refund.id },
+        ]}
         eyebrow="환불 상세"
         title={`${refund.id} 환불 검토 상세`}
-        description="환불 요청의 상태, 고객과 결제 문맥, 검토 메모, 감사 이벤트를 한 화면에서 확인할 수 있습니다."
+        description="환불 요청의 상태, 고객과 결제 맥락, 검토 메모, 감사 이벤트를 한 화면에서 확인할 수 있습니다."
+        quickLinks={quickLinks}
       />
 
-      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+      <section>
         <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
             환불 요약
@@ -50,7 +89,7 @@ export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
             <div>
               <dt className="font-semibold text-slate-950">검토 메모</dt>
               <dd className="mt-1">
-                {refund.reviewComment ?? "아직 남긴 검토 메모가 없습니다."}
+                {refund.reviewComment ?? "아직 입력된 검토 메모가 없습니다."}
               </dd>
             </div>
             <div>
@@ -60,36 +99,6 @@ export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
               </dd>
             </div>
           </dl>
-        </article>
-
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-            관련 이동
-          </p>
-          <div className="mt-6 flex flex-col gap-3">
-            <Link
-              href="/admin/refunds"
-              className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              환불 목록으로 돌아가기
-            </Link>
-            {customer ? (
-              <Link
-                href={`/admin/customers/${customer.id}`}
-                className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                고객 상세 보기
-              </Link>
-            ) : null}
-            {payment ? (
-              <Link
-                href={`/admin/payments/${payment.id}`}
-                className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                결제 대응 화면 열기
-              </Link>
-            ) : null}
-          </div>
         </article>
       </section>
 
@@ -107,7 +116,7 @@ export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
         <StatCard
           label="관련 결제"
           value={payment?.id ?? "미확인"}
-          description="이 환불 요청이 연결된 결제 건입니다."
+          description="이 환불 요청과 연결된 원 결제 건입니다."
         />
         <StatCard
           label="관련 고객"
@@ -163,7 +172,7 @@ export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
               <dd className="mt-1">
                 {subscription?.nextBillingDate
                   ? formatDate(subscription.nextBillingDate)
-                  : "예정 없음"}
+                  : "일정 없음"}
               </dd>
             </div>
           </dl>
@@ -171,7 +180,7 @@ export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
 
         <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-            감사 타임라인
+            감사 트레일
           </p>
 
           {activityItems.length > 0 ? (
@@ -195,7 +204,7 @@ export function RefundDetailView({ snapshot }: RefundDetailViewProps) {
             <div className="mt-6">
               <EmptyState
                 title="감사 이벤트가 없습니다"
-                description="이 환불 요청과 관련된 운영 이벤트가 기록되면 이 영역에서 확인할 수 있습니다."
+                description="이 환불 요청과 관련된 운영 이벤트가 기록되면 여기에서 확인할 수 있습니다."
               />
             </div>
           )}

@@ -68,12 +68,23 @@ describe("RefundDetailView", () => {
 
     expect(screen.getByText("refund_001 환불 검토 상세")).toBeInTheDocument();
     expect(screen.getByText("중복 결제 보정")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "관리자 홈" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+    expect(screen.getByRole("link", { name: "환불" })).toHaveAttribute(
+      "href",
+      "/admin/refunds",
+    );
     expect(
-      screen.getByRole("link", { name: "고객 상세 보기" }),
+      screen.getByRole("link", { name: /^고객 상세/ }),
     ).toHaveAttribute("href", "/admin/customers/cust_001");
     expect(
-      screen.getByRole("link", { name: "결제 대응 화면 열기" }),
+      screen.getByRole("link", { name: /^결제 상세/ }),
     ).toHaveAttribute("href", "/admin/payments/pay_002");
+    expect(
+      screen.getByRole("link", { name: /^구독 워크벤치/ }),
+    ).toHaveAttribute("href", "/admin/subscriptions?focus=sub_001");
     expect(screen.getByText("중복 결제 건 환불을 승인했습니다.")).toBeInTheDocument();
   });
 });

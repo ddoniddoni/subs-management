@@ -1,10 +1,11 @@
 import Link from "next/link";
 
+import { AdminRouteHeader } from "@/components/shared/admin-route-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
+import { getAdminSubscriptionsHref } from "@/lib/admin-routes";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 import {
@@ -22,16 +23,54 @@ type CustomerDetailViewProps = {
 export function CustomerDetailView({ snapshot }: CustomerDetailViewProps) {
   const { activityItems, coupons, customer, payments, refunds, stats, subscription } =
     snapshot;
+  const latestPayment = payments[0] ?? null;
+  const latestRefund = refunds[0] ?? null;
+  const quickLinks = [
+    {
+      label: "고객 목록",
+      description: "고객 탐색 테이블로 돌아가 다른 계정을 확인합니다.",
+      href: "/admin/customers",
+    },
+    ...(subscription
+      ? [
+          {
+            label: "구독 워크벤치",
+            description: "현재 고객의 구독을 초점 상태로 바로 엽니다.",
+            href: getAdminSubscriptionsHref(subscription.id),
+          },
+        ]
+      : []),
+    {
+      label: latestPayment ? "최근 결제 상세" : "결제 작업대",
+      description: latestPayment
+        ? "가장 최근 결제 건의 상세 맥락으로 이동합니다."
+        : "해당 고객의 결제 흐름을 목록에서 다시 확인합니다.",
+      href: latestPayment ? `/admin/payments/${latestPayment.id}` : "/admin/payments",
+    },
+    {
+      label: latestRefund ? "최근 환불 상세" : "환불 검토 보드",
+      description: latestRefund
+        ? "가장 최근 환불 요청의 검토 상태를 확인합니다."
+        : "관련 환불 요청이 생기면 보드에서 검토합니다.",
+      href: latestRefund ? `/admin/refunds/${latestRefund.id}` : "/admin/refunds",
+    },
+  ];
 
   return (
     <main className="flex flex-col gap-10">
-      <PageHeader
+      <AdminRouteHeader
+        breadcrumbs={[
+          { label: "관리자 홈", href: "/admin" },
+          { label: "고객", href: "/admin/customers" },
+          { label: customer.name },
+        ]}
         eyebrow="고객 상세"
         title={`${customer.name} 운영 상세`}
         description={`${customer.company} 계정의 구독 상태, 결제 이력, 환불 처리, 쿠폰 보상, 감사 이벤트를 한 화면에서 확인할 수 있습니다.`}
+        quickLinks={quickLinks}
       />
 
-      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      <section>
         <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
             고객 프로필
@@ -79,32 +118,6 @@ export function CustomerDetailView({ snapshot }: CustomerDetailViewProps) {
               </dd>
             </div>
           </dl>
-        </article>
-
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-            운영 액션
-          </p>
-          <div className="mt-6 flex flex-col gap-3">
-            <Link
-              href="/admin/customers"
-              className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              고객 목록으로 돌아가기
-            </Link>
-            <Link
-              href="/admin/payments"
-              className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              결제 대응 화면 열기
-            </Link>
-            <Link
-              href="/admin/refunds"
-              className="rounded-2xl border border-slate-200 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              환불 검토 화면 열기
-            </Link>
-          </div>
         </article>
       </section>
 

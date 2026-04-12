@@ -76,9 +76,20 @@ describe("CustomerDetailView", () => {
     expect(screen.getByText("환불 이력")).toBeInTheDocument();
     expect(screen.getByText("쿠폰 이력")).toBeInTheDocument();
     expect(screen.getByText("감사 타임라인")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "관리자 홈" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+    expect(screen.getByRole("link", { name: "고객" })).toHaveAttribute(
+      "href",
+      "/admin/customers",
+    );
     expect(
-      screen.getByRole("link", { name: "결제 대응 화면 열기" }),
-    ).toHaveAttribute("href", "/admin/payments");
+      screen.getByRole("link", { name: /^구독 워크벤치/ }),
+    ).toHaveAttribute("href", "/admin/subscriptions?focus=sub_001");
+    expect(
+      screen.getByRole("link", { name: /^최근 결제 상세/ }),
+    ).toHaveAttribute("href", `/admin/payments/${snapshot!.payments[0]!.id}`);
     expect(screen.getByRole("link", { name: "pay_001" })).toHaveAttribute(
       "href",
       "/admin/payments/pay_001",
