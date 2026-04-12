@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useState } from "react";
+import { startTransition, useDeferredValue, useState } from "react";
 
 import { ActionActivityFeed } from "@/components/shared/action-activity-feed";
 import { ActionFeedbackBanner } from "@/components/shared/action-feedback-banner";
@@ -11,118 +11,71 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TableShell } from "@/components/ui/table-shell";
 import {
+  couponStatusMeta,
   paymentStatusMeta,
+  refundStatusMeta,
   subscriptionStatusMeta,
 } from "@/lib/domain-meta";
-import { formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { mapAuditEventsToActivityItems } from "@/lib/workflow-activity";
 import {
-  buildCustomerTableRows,
   filterAndSortCustomerTableRows,
   paginateCustomerTableRows,
   type CustomerTableSortKey,
 } from "@/features/customers/lib/customer-table";
+import {
+  buildSubscriptionChangeDetail,
+  buildSubscriptionChangeSummary,
+  buildSubscriptionContextSnapshot,
+  buildSubscriptionRows,
+  getSubscriptionTransitionOptions,
+  validateSubscriptionTransition,
+} from "@/features/customers/lib/subscription-ops";
 import type {
   AuditEvent,
+  Coupon,
   Customer,
   Payment,
   Plan,
+  Refund,
   Subscription,
   SubscriptionStatus,
 } from "@/types/domain";
 
 type SubscriptionStatusWorkbenchProps = {
   auditEvents: AuditEvent[];
+  coupons: Coupon[];
   customers: Customer[];
-  plans: Plan[];
-  subscriptions: Subscription[];
   payments: Payment[];
+  plans: Plan[];
+  refunds: Refund[];
+  subscriptions: Subscription[];
+};
+
+type FeedbackState = {
+  message: string;
+  tone: "danger" | "success";
+  title?: string;
 };
 
 const PAGE_SIZE = 2;
 
-type TransitionOption = {
-  description: string;
-  label: string;
-  nextStatus: SubscriptionStatus;
-};
-
-const transitionOptions: Record<SubscriptionStatus, TransitionOption[]> = {
-  active: [
-    {
-      nextStatus: "paused",
-      label: "일시 중지",
-      description: "다음 청구 전에 서비스 사용을 잠시 멈추고 후속 대응 여지를 남깁니다.",
-    },
-    {
-      nextStatus: "scheduled_for_cancel",
-      label: "해지 예약",
-      description: "현재 청구 주기를 마친 뒤 자동으로 해지되도록 예약합니다.",
-    },
-  ],
-  past_due: [
-    {
-      nextStatus: "active",
-      label: "정상 복구",
-      description: "수동 확인 후 구독을 다시 정상 상태로 전환합니다.",
-    },
-    {
-      nextStatus: "paused",
-      label: "일시 중지",
-      description: "결제 문제를 해결할 때까지 사용을 잠시 중지합니다.",
-    },
-    {
-      nextStatus: "scheduled_for_cancel",
-      label: "해지 예약",
-      description: "지속적인 결제 실패로 다음 청구 시점 종료를 예약합니다.",
-    },
-  ],
-  paused: [
-    {
-      nextStatus: "active",
-      label: "재개",
-      description: "고객 요청 또는 운영 판단에 따라 구독을 다시 활성화합니다.",
-    },
-    {
-      nextStatus: "scheduled_for_cancel",
-      label: "해지 예약",
-      description: "일시 중지 상태에서 종료를 확정하기 전에 예약 상태로 전환합니다.",
-    },
-  ],
-  scheduled_for_cancel: [
-    {
-      nextStatus: "active",
-      label: "예약 해지 취소",
-      description: "고객 유지에 성공해 해지 예약을 풀고 정상 상태로 복구합니다.",
-    },
-    {
-      nextStatus: "canceled",
-      label: "즉시 해지",
-      description: "다음 청구를 기다리지 않고 운영자가 즉시 해지 처리합니다.",
-    },
-  ],
-  canceled: [
-    {
-      nextStatus: "active",
-      label: "재활성화",
-      description: "복귀 고객을 위해 기존 구독을 다시 활성 상태로 전환합니다.",
-    },
-  ],
-};
-
 export function SubscriptionStatusWorkbench({
   auditEvents,
+  coupons,
   customers,
-  plans,
-  subscriptions,
   payments,
+  plans,
+  refunds,
+  subscriptions,
 }: SubscriptionStatusWorkbenchProps) {
   const [localSubscriptions, setLocalSubscriptions] = useState(subscriptions);
-  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(
+  const [focusedSubscriptionId, setFocusedSubscriptionId] = useState(
     subscriptions[0]?.id ?? "",
   );
   const [nextStatus, setNextStatus] = useState<SubscriptionStatus | null>(null);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [changeReason, setChangeReason] = useState("");
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<SubscriptionStatus | "all">(
     "all",
@@ -137,7 +90,7 @@ export function SubscriptionStatusWorkbench({
   );
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  const rows = buildCustomerTableRows({
+  const rows = buildSubscriptionRows({
     customers,
     payments,
     plans,
@@ -154,11 +107,22 @@ export function SubscriptionStatusWorkbench({
     currentPage,
     PAGE_SIZE,
   );
-
   const selectedRow =
-    filteredRows.find((row) => row.subscription.id === selectedSubscriptionId) ??
+    filteredRows.find((row) => row.subscription.id === focusedSubscriptionId) ??
     paginatedRows.pageRows[0] ??
     null;
+  const selectedSnapshot = selectedRow
+    ? buildSubscriptionContextSnapshot({
+        coupons,
+        customerTableRows: rows,
+        payments,
+        refunds,
+        subscriptionId: selectedRow.subscription.id,
+      })
+    : null;
+  const transitionOptions = selectedSnapshot
+    ? getSubscriptionTransitionOptions(selectedSnapshot.row.subscription.status)
+    : [];
 
   const activeCount = localSubscriptions.filter(
     (item) => item.status === "active",
@@ -169,74 +133,134 @@ export function SubscriptionStatusWorkbench({
   const scheduledCancelCount = localSubscriptions.filter(
     (item) => item.status === "scheduled_for_cancel",
   ).length;
+  const requestedRefundCount = refunds.filter(
+    (refund) => refund.status === "requested",
+  ).length;
+
+  function clearInlineError() {
+    setFeedback((current) => (current?.tone === "danger" ? null : current));
+  }
+
+  function resetPendingAction(nextSubscriptionId?: string) {
+    startTransition(() => {
+      if (nextSubscriptionId) {
+        setFocusedSubscriptionId(nextSubscriptionId);
+      }
+      setNextStatus(null);
+      setChangeReason("");
+      clearInlineError();
+    });
+  }
 
   function handleConfirmStatusChange() {
-    if (!selectedRow || !nextStatus) {
+    if (!selectedSnapshot || !nextStatus) {
       return;
     }
 
-    const previousStatus = selectedRow.subscription.status;
+    const validationMessage = validateSubscriptionTransition({
+      currentStatus: selectedSnapshot.row.subscription.status,
+      nextStatus,
+      reason: changeReason,
+    });
+
+    if (validationMessage) {
+      setFeedback({
+        tone: "danger",
+        title: "변경 실패",
+        message: validationMessage,
+      });
+      return;
+    }
+
     const now = new Date().toISOString();
     const today = now.slice(0, 10);
-    const summary = `${selectedRow.customer?.name ?? "고객"}의 구독 상태를 ${
-      subscriptionStatusMeta[previousStatus].label
-    }에서 ${subscriptionStatusMeta[nextStatus].label}(으)로 변경했습니다.`;
+    const summary = buildSubscriptionChangeSummary({
+      customerName: selectedSnapshot.row.customer.name,
+      nextStatus,
+      previousStatus: selectedSnapshot.row.subscription.status,
+    });
+    const detail = buildSubscriptionChangeDetail({
+      reason: changeReason,
+      subscriptionId: selectedSnapshot.row.subscription.id,
+    });
 
-    setLocalSubscriptions((current) =>
-      current.map((subscription) =>
-        subscription.id === selectedRow.subscription.id
-          ? {
-              ...subscription,
-              status: nextStatus,
-              cancelAt:
-                nextStatus === "scheduled_for_cancel" || nextStatus === "canceled"
-                  ? subscription.nextBillingDate ?? today
-                  : null,
-            }
-          : subscription,
-      ),
-    );
-
-    setFeedbackMessage(summary);
-    setActivityItems((current) => [
-      {
-        id: `subscription-${selectedRow.subscription.id}-${now}`,
-        occurredAt: now,
-        summary,
-        detail: `subscription · ${selectedRow.subscription.id}`,
-      },
-      ...current,
-    ]);
-    setNextStatus(null);
+    startTransition(() => {
+      setLocalSubscriptions((current) =>
+        current.map((subscription) =>
+          subscription.id === selectedSnapshot.row.subscription.id
+            ? {
+                ...subscription,
+                status: nextStatus,
+                cancelAt:
+                  nextStatus === "scheduled_for_cancel" || nextStatus === "canceled"
+                    ? subscription.nextBillingDate ?? today
+                    : null,
+                nextBillingDate:
+                  nextStatus === "canceled"
+                    ? null
+                    : subscription.nextBillingDate ?? today,
+              }
+            : subscription,
+        ),
+      );
+      setFeedback({
+        tone: "success",
+        title: "상태 변경 완료",
+        message: summary,
+      });
+      setActivityItems((current) => [
+        {
+          id: `subscription-${selectedSnapshot.row.subscription.id}-${now}`,
+          occurredAt: now,
+          summary,
+          detail,
+        },
+        ...current,
+      ]);
+      setNextStatus(null);
+      setChangeReason("");
+      setFocusedSubscriptionId(selectedSnapshot.row.subscription.id);
+    });
   }
 
   return (
     <main className="flex flex-col gap-10">
       <PageHeader
         eyebrow="관리자 운영"
-        title="고객 구독 상태 변경"
-        description="고객의 현재 구독 상태를 검토하고, 일시 중지나 해지 예약 같은 고위험 상태 변경을 확인 절차와 함께 처리하는 워크플로우입니다."
+        title="구독 상태 운영 워크벤치"
+        description="구독 상태를 안전하게 변경하고, 결제 실패·환불 요청·보상 쿠폰 같은 주변 운영 맥락을 함께 보면서 판단하는 관리자 화면입니다."
       />
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="활성 구독"
           value={`${activeCount}건`}
-          description="정상 운영 중인 구독 건수입니다."
+          description="정상 운영 중인 구독 수입니다."
         />
         <StatCard
           label="결제 지연"
           value={`${pastDueCount}건`}
-          description="후속 대응이 필요한 지연 상태의 구독 건수입니다."
+          description="후속 대응이 필요한 연체 상태 구독 수입니다."
         />
         <StatCard
           label="해지 예약"
           value={`${scheduledCancelCount}건`}
-          description="유지 대응 여지가 남아 있는 예약 해지 건수입니다."
+          description="리텐션 확인이 필요한 해지 예정 구독 수입니다."
+        />
+        <StatCard
+          label="검토 중 환불"
+          value={`${requestedRefundCount}건`}
+          description="구독 판단에 영향을 줄 수 있는 환불 요청 수입니다."
         />
       </section>
 
-      {feedbackMessage ? <ActionFeedbackBanner message={feedbackMessage} /> : null}
+      {feedback ? (
+        <ActionFeedbackBanner
+          message={feedback.message}
+          title={feedback.title}
+          tone={feedback.tone}
+        />
+      ) : null}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
@@ -245,10 +269,14 @@ export function SubscriptionStatusWorkbench({
             <input
               value={searchQuery}
               onChange={(event) => {
-                setSearchQuery(event.target.value);
-                setCurrentPage(1);
+                const nextValue = event.target.value;
+
+                startTransition(() => {
+                  setSearchQuery(nextValue);
+                  setCurrentPage(1);
+                });
               }}
-              placeholder="고객명, 이메일, 회사명으로 검색"
+              placeholder="이름, 이메일, 회사명으로 검색"
               className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
             />
           </label>
@@ -258,8 +286,12 @@ export function SubscriptionStatusWorkbench({
             <select
               value={statusFilter}
               onChange={(event) => {
-                setStatusFilter(event.target.value as SubscriptionStatus | "all");
-                setCurrentPage(1);
+                const nextValue = event.target.value as SubscriptionStatus | "all";
+
+                startTransition(() => {
+                  setStatusFilter(nextValue);
+                  setCurrentPage(1);
+                });
               }}
               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
             >
@@ -277,8 +309,12 @@ export function SubscriptionStatusWorkbench({
             <select
               value={planFilter}
               onChange={(event) => {
-                setPlanFilter(event.target.value);
-                setCurrentPage(1);
+                const nextValue = event.target.value;
+
+                startTransition(() => {
+                  setPlanFilter(nextValue);
+                  setCurrentPage(1);
+                });
               }}
               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
             >
@@ -295,20 +331,25 @@ export function SubscriptionStatusWorkbench({
             <span className="text-sm font-semibold text-slate-950">정렬 기준</span>
             <select
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as CustomerTableSortKey)}
+              onChange={(event) => {
+                const nextValue = event.target.value as CustomerTableSortKey;
+
+                startTransition(() => {
+                  setSortBy(nextValue);
+                  setCurrentPage(1);
+                });
+              }}
               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
             >
-              <option value="customer_name">고객명 순</option>
-              <option value="latest_payment">최근 결제 최신순</option>
-              <option value="next_billing_date">다음 청구일 빠른순</option>
+              <option value="customer_name">고객명</option>
+              <option value="latest_payment">최근 결제</option>
+              <option value="next_billing_date">다음 청구일</option>
             </select>
           </label>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-          <span>
-            필터 결과 {paginatedRows.totalRows}건
-          </span>
+          <span>필터 결과 {paginatedRows.totalRows}건</span>
           <span>
             {paginatedRows.currentPage} / {paginatedRows.totalPages} 페이지
           </span>
@@ -317,83 +358,85 @@ export function SubscriptionStatusWorkbench({
 
       {rows.length > 0 ? (
         <TableShell
-          title="고객 구독 목록"
-          description="검색과 필터로 대상을 좁힌 뒤, 상태를 변경할 고객을 선택해 아래에서 전환 가능한 상태와 확인 단계를 볼 수 있습니다."
-          columns={["고객명", "회사", "플랜", "현재 상태", "최근 결제", "다음 청구", "작업"]}
+          title="구독 운영 대상"
+          description="대상을 먼저 찾고, 선택한 구독에 대해 상태 변경과 주변 운영 맥락을 함께 검토합니다."
+          columns={[
+            "고객",
+            "회사",
+            "플랜",
+            "구독 상태",
+            "최근 결제",
+            "다음 청구",
+            "작업",
+          ]}
         >
-          {paginatedRows.pageRows.length > 0 ? paginatedRows.pageRows.map((row) => {
-            const subscriptionMeta = subscriptionStatusMeta[row.subscription.status];
-            const paymentMeta = row.latestPayment
-              ? paymentStatusMeta[row.latestPayment.status]
-              : { label: "결제 없음", tone: "neutral" as const };
+          {paginatedRows.pageRows.length > 0 ? (
+            paginatedRows.pageRows.map((row) => {
+              const subscriptionMeta = subscriptionStatusMeta[row.subscription.status];
+              const paymentMeta = row.latestPayment
+                ? paymentStatusMeta[row.latestPayment.status]
+                : { label: "결제 없음", tone: "neutral" as const };
 
-            return (
-              <tr key={row.subscription.id} className="border-t border-slate-200">
-                <td className="px-6 py-4 text-sm font-medium text-slate-950">
-                  {row.customer ? (
+              return (
+                <tr key={row.subscription.id} className="border-t border-slate-200">
+                  <td className="px-6 py-4 text-sm text-slate-600">
                     <Link
                       href={`/admin/customers/${row.customer.id}`}
-                      className="transition hover:text-slate-700 hover:underline"
+                      className="font-medium text-slate-950 transition hover:text-slate-700 hover:underline"
                     >
                       {row.customer.name}
                     </Link>
-                  ) : (
-                    "미확인 고객"
-                  )}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">
-                  {row.customer.company}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">
-                  {row.plan?.name ?? "플랜 미정"}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">
-                  <StatusBadge
-                    label={subscriptionMeta.label}
-                    tone={subscriptionMeta.tone}
-                  />
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">
-                  <StatusBadge
-                    label={paymentMeta.label}
-                    tone={paymentMeta.tone}
-                  />
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">
-                  {row.subscription.nextBillingDate
-                    ? formatDate(row.subscription.nextBillingDate)
-                    : "예정 없음"}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedSubscriptionId(row.subscription.id);
-                        setNextStatus(null);
-                      }}
-                      className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                    >
-                      상태 변경
-                    </button>
-                    {row.customer ? (
+                    <p className="mt-1 text-xs text-slate-500">{row.customer.email}</p>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {row.customer.company}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {row.plan?.name ?? "플랜 미정"}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    <StatusBadge
+                      label={subscriptionMeta.label}
+                      tone={subscriptionMeta.tone}
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    <StatusBadge
+                      label={paymentMeta.label}
+                      tone={paymentMeta.tone}
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {row.subscription.nextBillingDate
+                      ? formatDate(row.subscription.nextBillingDate)
+                      : "일정 없음"}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => resetPendingAction(row.subscription.id)}
+                        className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                      >
+                        검토
+                      </button>
                       <Link
                         href={`/admin/customers/${row.customer.id}`}
                         className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
                       >
-                        상세 보기
+                        고객 상세
                       </Link>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            );
-          }) : (
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
             <tr className="border-t border-slate-200">
               <td className="px-6 py-8" colSpan={7}>
                 <EmptyState
-                  title="조건에 맞는 고객이 없습니다"
-                  description="검색어를 지우거나 필터를 조정해 다른 고객을 찾아보세요."
+                  title="조건에 맞는 구독이 없습니다"
+                  description="검색어를 조정하거나 필터를 초기화해 다른 구독 대상을 찾아보세요."
                 />
               </td>
             </tr>
@@ -401,8 +444,8 @@ export function SubscriptionStatusWorkbench({
         </TableShell>
       ) : (
         <EmptyState
-          title="표시할 구독이 없습니다"
-          description="구독 데이터가 준비되면 이 화면에서 상태 변경 워크플로우를 진행할 수 있습니다."
+          title="표시할 구독 데이터가 없습니다"
+          description="구독 데이터가 준비되면 여기에서 상태 변경 워크플로를 진행할 수 있습니다."
         />
       )}
 
@@ -414,7 +457,11 @@ export function SubscriptionStatusWorkbench({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              onClick={() =>
+                startTransition(() => {
+                  setCurrentPage((page) => Math.max(1, page - 1));
+                })
+              }
               disabled={paginatedRows.currentPage === 1}
               className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -425,7 +472,11 @@ export function SubscriptionStatusWorkbench({
                 <button
                   key={page}
                   type="button"
-                  onClick={() => setCurrentPage(page)}
+                  onClick={() =>
+                    startTransition(() => {
+                      setCurrentPage(page);
+                    })
+                  }
                   className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                     page === paginatedRows.currentPage
                       ? "bg-slate-950 text-white"
@@ -439,9 +490,11 @@ export function SubscriptionStatusWorkbench({
             <button
               type="button"
               onClick={() =>
-                setCurrentPage((page) =>
-                  Math.min(paginatedRows.totalPages, page + 1),
-                )
+                startTransition(() => {
+                  setCurrentPage((page) =>
+                    Math.min(paginatedRows.totalPages, page + 1),
+                  );
+                })
               }
               disabled={paginatedRows.currentPage === paginatedRows.totalPages}
               className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -452,129 +505,319 @@ export function SubscriptionStatusWorkbench({
         </section>
       ) : null}
 
-      {selectedRow ? (
-        <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-              선택된 고객
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-950">
-              {selectedRow.customer?.name ?? "이름 미확인"}
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              {selectedRow.customer?.email ?? "이메일 미확인"}
-            </p>
-            {selectedRow.customer ? (
-              <Link
-                href={`/admin/customers/${selectedRow.customer.id}`}
-                className="mt-4 inline-flex text-sm font-medium text-slate-700 transition hover:text-slate-950 hover:underline"
-              >
-                고객 상세 보기
-              </Link>
-            ) : null}
+      {selectedSnapshot ? (
+        <>
+          <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+                선택된 구독
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold text-slate-950">
+                {selectedSnapshot.row.customer.name}
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                {selectedSnapshot.row.customer.email}
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                {selectedSnapshot.row.customer.company} ·{" "}
+                {selectedSnapshot.row.plan?.name ?? "플랜 미정"}
+              </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <StatusBadge
-                label={
-                  subscriptionStatusMeta[selectedRow.subscription.status].label
-                }
-                tone={
-                  subscriptionStatusMeta[selectedRow.subscription.status].tone
-                }
-              />
-              {selectedRow.subscription.nextBillingDate ? (
+              <div className="mt-6 flex flex-wrap gap-3">
                 <StatusBadge
-                  label={`다음 청구 ${formatDate(
-                    selectedRow.subscription.nextBillingDate,
-                  )}`}
+                  label={
+                    subscriptionStatusMeta[selectedSnapshot.row.subscription.status].label
+                  }
+                  tone={
+                    subscriptionStatusMeta[selectedSnapshot.row.subscription.status].tone
+                  }
+                />
+                <StatusBadge
+                  label={`${selectedSnapshot.row.subscription.seats}석 사용 중`}
                   tone="info"
                 />
-              ) : null}
-            </div>
-
-            <div className="mt-8 space-y-3">
-              {transitionOptions[selectedRow.subscription.status].map((option) => (
-                <button
-                  key={option.nextStatus}
-                  type="button"
-                  onClick={() => setNextStatus(option.nextStatus)}
-                  className={`w-full rounded-2xl border px-5 py-4 text-left transition ${
-                    nextStatus === option.nextStatus
-                      ? "border-slate-900 bg-slate-950 text-white"
-                      : "border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  <p className="text-sm font-semibold">{option.label}</p>
-                  <p className="mt-2 text-sm leading-6 text-inherit">
-                    {option.description}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </article>
-
-          <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-              변경 확인
-            </p>
-
-            {nextStatus ? (
-              <>
-                <h2 className="mt-3 text-2xl font-semibold text-slate-950">
-                  {subscriptionStatusMeta[nextStatus].label}로 변경
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
-                  이 변경은 즉시 화면에 반영됩니다. 실제 서버 저장은 하지 않지만,
-                  운영 제품처럼 확인 단계를 거친 뒤 처리되도록 구성했습니다.
-                </p>
-
-                <div className="mt-6 flex flex-wrap gap-3">
+                {selectedSnapshot.row.subscription.nextBillingDate ? (
                   <StatusBadge
-                    label={`현재 ${
-                      subscriptionStatusMeta[selectedRow.subscription.status].label
-                    }`}
-                    tone={
-                      subscriptionStatusMeta[selectedRow.subscription.status].tone
+                    label={`다음 청구 ${formatDate(
+                      selectedSnapshot.row.subscription.nextBillingDate,
+                    )}`}
+                    tone="neutral"
+                  />
+                ) : null}
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-2">
+                {selectedSnapshot.riskItems.length > 0 ? (
+                  selectedSnapshot.riskItems.map((riskItem) => (
+                    <StatusBadge
+                      key={riskItem.id}
+                      label={riskItem.label}
+                      tone={riskItem.tone}
+                    />
+                  ))
+                ) : (
+                  <StatusBadge label="추가 위험 신호 없음" tone="success" />
+                )}
+              </div>
+
+              <div className="mt-8 space-y-3">
+                {transitionOptions.map((option) => (
+                  <button
+                    key={option.nextStatus}
+                    type="button"
+                    onClick={() =>
+                      startTransition(() => {
+                        setNextStatus(option.nextStatus);
+                        clearInlineError();
+                      })
                     }
-                  />
-                  <StatusBadge
-                    label={`변경 후 ${subscriptionStatusMeta[nextStatus].label}`}
-                    tone={subscriptionStatusMeta[nextStatus].tone}
-                  />
-                </div>
+                    className={`w-full rounded-2xl border px-5 py-4 text-left transition ${
+                      nextStatus === option.nextStatus
+                        ? "border-slate-900 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">{option.label}</p>
+                    <p className="mt-2 text-sm leading-6 text-inherit">
+                      {option.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </article>
 
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={handleConfirmStatusChange}
-                    className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    변경 확인
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNextStatus(null)}
-                    className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                  >
-                    취소
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                왼쪽에서 전환할 상태를 먼저 선택하면, 여기에서 확인 후 변경할 수
-                있습니다.
+            <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+                변경 확인
               </p>
-            )}
-          </article>
-        </section>
+
+              {nextStatus ? (
+                transitionOptions
+                  .filter((option) => option.nextStatus === nextStatus)
+                  .map((option) => (
+                    <div key={option.nextStatus}>
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <h2 className="text-2xl font-semibold text-slate-950">
+                          {subscriptionStatusMeta[nextStatus].label}로 변경
+                        </h2>
+                        <StatusBadge label={option.guardLabel} tone={option.guardTone} />
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-slate-600">
+                        {option.description}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {option.reasonHint}
+                      </p>
+
+                      <div className="mt-6 flex flex-wrap gap-3">
+                        <StatusBadge
+                          label={`현재 ${
+                            subscriptionStatusMeta[
+                              selectedSnapshot.row.subscription.status
+                            ].label
+                          }`}
+                          tone={
+                            subscriptionStatusMeta[
+                              selectedSnapshot.row.subscription.status
+                            ].tone
+                          }
+                        />
+                        <StatusBadge
+                          label={`변경 후 ${subscriptionStatusMeta[nextStatus].label}`}
+                          tone={subscriptionStatusMeta[nextStatus].tone}
+                        />
+                      </div>
+
+                      <div className="mt-6">
+                        <label
+                          htmlFor="subscription-change-reason"
+                          className="text-sm font-semibold text-slate-950"
+                        >
+                          상태 변경 사유
+                        </label>
+                        <textarea
+                          id="subscription-change-reason"
+                          value={changeReason}
+                          onChange={(event) => {
+                            setChangeReason(event.target.value);
+                            clearInlineError();
+                          }}
+                          rows={4}
+                          className="mt-3 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                          placeholder="운영 판단 근거와 고객 커뮤니케이션 내용을 남겨 주세요."
+                        />
+                      </div>
+
+                      <div className="mt-8 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={handleConfirmStatusChange}
+                          className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          {option.confirmLabel}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => resetPendingAction()}
+                          className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <p className="mt-4 text-sm leading-6 text-slate-600">
+                  왼쪽에서 전환할 상태를 먼저 선택하면 여기에서 확인 절차와 사유 입력을 진행할 수 있습니다.
+                </p>
+              )}
+            </article>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-3">
+            <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+                결제 컨텍스트
+              </p>
+              {selectedSnapshot.recentPayments.length > 0 ? (
+                <>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {selectedSnapshot.latestPayment ? (
+                      <>
+                        <StatusBadge
+                          label={
+                            paymentStatusMeta[selectedSnapshot.latestPayment.status].label
+                          }
+                          tone={
+                            paymentStatusMeta[selectedSnapshot.latestPayment.status].tone
+                          }
+                        />
+                        <StatusBadge
+                          label={formatCurrency(selectedSnapshot.latestPayment.amount)}
+                          tone="info"
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                  <ol className="mt-6 space-y-3">
+                    {selectedSnapshot.recentPayments.slice(0, 3).map((payment) => (
+                      <li
+                        key={payment.id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <Link
+                            href={`/admin/payments/${payment.id}`}
+                            className="text-sm font-semibold text-slate-950 transition hover:text-slate-700 hover:underline"
+                          >
+                            {payment.id}
+                          </Link>
+                          <StatusBadge
+                            label={paymentStatusMeta[payment.status].label}
+                            tone={paymentStatusMeta[payment.status].tone}
+                          />
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">{payment.methodLabel}</p>
+                        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                          {formatDateTime(payment.attemptedAt)}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              ) : (
+                <div className="mt-6">
+                  <EmptyState
+                    title="연결된 결제 이력이 없습니다"
+                    description="결제 시도가 생기면 최근 결제 상태를 여기에서 함께 확인할 수 있습니다."
+                  />
+                </div>
+              )}
+            </article>
+
+            <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+                환불 컨텍스트
+              </p>
+              {selectedSnapshot.recentRefunds.length > 0 ? (
+                <ol className="mt-6 space-y-3">
+                  {selectedSnapshot.recentRefunds.slice(0, 3).map((refund) => (
+                    <li
+                      key={refund.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <Link
+                          href={`/admin/refunds/${refund.id}`}
+                          className="text-sm font-semibold text-slate-950 transition hover:text-slate-700 hover:underline"
+                        >
+                          {refund.id}
+                        </Link>
+                        <StatusBadge
+                          label={refundStatusMeta[refund.status].label}
+                          tone={refundStatusMeta[refund.status].tone}
+                        />
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">{refund.reason}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                        {formatDateTime(refund.requestedAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="mt-6">
+                  <EmptyState
+                    title="연결된 환불 요청이 없습니다"
+                    description="환불 요청이 생기면 구독 판단에 필요한 맥락을 여기에서 확인할 수 있습니다."
+                  />
+                </div>
+              )}
+            </article>
+
+            <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+                혜택 컨텍스트
+              </p>
+              {selectedSnapshot.activeCoupons.length > 0 ? (
+                <ol className="mt-6 space-y-3">
+                  {selectedSnapshot.activeCoupons.slice(0, 3).map((coupon) => (
+                    <li
+                      key={coupon.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-slate-950">{coupon.code}</p>
+                        <StatusBadge
+                          label={couponStatusMeta[coupon.status].label}
+                          tone={couponStatusMeta[coupon.status].tone}
+                        />
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">{coupon.title}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                        {formatDate(coupon.expiresAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="mt-6">
+                  <EmptyState
+                    title="연결된 쿠폰이 없습니다"
+                    description="혜택이나 보상 정책이 적용되면 여기에서 함께 검토할 수 있습니다."
+                  />
+                </div>
+              )}
+            </article>
+          </section>
+        </>
       ) : null}
 
       <ActionActivityFeed
         title="구독 상태 변경 로그"
-        description="목업 감사 이벤트와 이번 세션에서 처리한 상태 변경을 함께 보여줍니다."
-        emptyTitle="아직 기록된 상태 변경이 없습니다"
-        emptyDescription="구독 상태를 변경하면 여기에서 최근 처리 이력을 바로 확인할 수 있습니다."
+        description="기존 감사 이벤트와 이번 세션에서 처리한 상태 변경 이력을 함께 보여줍니다."
+        emptyTitle="아직 기록된 상태 변경 이력이 없습니다"
+        emptyDescription="구독 상태를 변경하면 최근 처리 이력이 바로 여기에 추가됩니다."
         items={activityItems}
       />
     </main>

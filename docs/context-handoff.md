@@ -6,12 +6,15 @@
 
 ## 현재 상태
 
-- 작성 기준일: 2026-04-11
-- 현재 브랜치: `develop`
+- 작성 기준일: 2026-04-12
+- 현재 브랜치: `step/18-subscription-ops-hardening`
 - 현재 작업 트리 목표 상태: clean
 - `develop` 반영 상태:
   - `step/17-subscription-ops-workbench`까지 머지 완료
-  - 현재 `develop`은 다음 step 시작 기준점입니다.
+  - 현재 `develop`은 `step/18-subscription-ops-hardening` 시작 기준점입니다.
+- step 브랜치 상태:
+  - `step/18-subscription-ops-hardening` 구현 및 검증 완료
+  - 아직 `develop`에는 머지되지 않았고, step 브랜치 기준으로 handoff를 남깁니다.
 
 ## 완료된 step
 
@@ -32,32 +35,29 @@
 - `step 15`: customer account center
 - `step 16`: admin command center
 - `step 17`: subscription ops workbench
+- `step 18`: subscription ops hardening
 
-## step 17 요약
+## step 18 요약
 
-`/admin/subscriptions` 전용 운영 화면을 추가하고, `/admin/customers`를 고객 탐색 테이블로 정상화했습니다.
+`/admin/subscriptions` 워크벤치를 실제 운영 흐름에 더 가깝게 다듬었습니다. 상태 변경 사유를 필수화하고, 결제/환불/쿠폰 맥락을 함께 보여주며, 처리 결과를 피드백 배너와 활동 로그에 남기도록 강화했습니다.
 
 추가/수정된 주요 파일:
 
-- `docs/execplans/step-17-subscription-ops-workbench.md`
-- `docs/steps/bootstrap-step-17-subscription-ops-workbench.md`
-- `src/app/(admin)/admin/customers/page.tsx`
+- `docs/execplans/step-18-subscription-ops-hardening.md`
+- `docs/steps/bootstrap-step-18-subscription-ops-hardening.md`
 - `src/app/(admin)/admin/subscriptions/page.tsx`
-- `src/app/(admin)/admin/subscriptions/loading.tsx`
-- `src/features/customers/components/customer-ops-table-view.tsx`
-- `src/features/admin-users/lib/admin-access.ts`
-- `src/features/admin-home/lib/admin-command-center.ts`
-- `src/lib/navigation.ts`
-- `tests/customer-ops-table-view.test.tsx`
-- `tests/admin-access.test.tsx`
+- `src/components/shared/action-feedback-banner.tsx`
+- `src/features/customers/components/subscription-status-workbench.tsx`
+- `src/features/customers/lib/subscription-ops.ts`
+- `tests/subscription-status-workbench.test.tsx`
 
 포함된 변경:
 
-- 관리자 내비게이션에 subscriptions 추가
-- 관리자 권한 정책에 `/admin/subscriptions` 반영
-- 구독 상태 변경 워크벤치를 `/admin/subscriptions`로 이동
-- 고객 목록에서 검색 / 필터 / 정렬 / 페이지네이션 복구
-- command center에서 구독 운영 라우트로 연결 갱신
+- 상태 변경 사유를 8자 이상 필수 입력으로 검증
+- 상태별 전이 옵션, 확인 문구, 가드 배지를 공통 helper로 분리
+- 결제 실패 / 요청 환불 / 활성 쿠폰 / 해지 예정 리스크를 구독 상세 맥락에 함께 표시
+- 성공/실패 피드백 배너와 최근 처리 이력에 변경 사유를 함께 기록
+- 필터 상태를 유지한 채 처리 후 결과가 비면 빈 상태를 보여주는 흐름까지 테스트 반영
 
 검증 결과:
 
@@ -68,26 +68,31 @@
 
 관련 커밋:
 
-- `fc73be9` `feat(admin): add subscription ops workbench`
-- `b9bb1a3` `docs(repo): add codex handoff`
+- step 17 관련:
+  - `fc73be9` `feat(admin): add subscription ops workbench`
+  - `b9bb1a3` `docs(repo): add codex handoff`
+- step 18 관련:
+  - 현재 브랜치의 최신 커밋에서 확인 가능
 
 ## 다음 세션에서 바로 할 일
 
 다음 step으로 넘어갈 때는 아래 순서를 따르면 됩니다.
 
-1. 최신 `develop`에서 새 브랜치 생성
-   - 예: `step/18-<slug>`
+1. 현재 `step/18-subscription-ops-hardening`를 `develop`에 머지
+2. 원격 `develop` 푸시
+3. 최신 `develop`에서 새 브랜치 생성
+   - 예: `step/19-<slug>`
 2. 구현 전에 문서 2종 먼저 생성
-   - `docs/execplans/step-18-<slug>.md`
-   - `docs/steps/bootstrap-step-18-<slug>.md`
-3. 구현
-4. 아래 검증 4종 실행
+   - `docs/execplans/step-19-<slug>.md`
+   - `docs/steps/bootstrap-step-19-<slug>.md`
+4. 구현
+5. 아래 검증 4종 실행
    - `npm.cmd run lint`
    - `npm.cmd run typecheck`
    - `npm.cmd run test`
    - `npm.cmd run build`
-5. Conventional Commit으로 커밋
-6. step 브랜치 원격 푸시
+6. Conventional Commit으로 커밋
+7. step 브랜치 원격 푸시
 
 ## 작업 방식 요약
 
@@ -109,6 +114,6 @@
 
 ## 참고
 
-- `docs/steps`에는 step 01부터 step 17까지 bootstrap 문서가 있습니다.
-- `docs/execplans`에는 step 05부터 step 17까지 실행 계획 문서가 있습니다.
+- `docs/steps`에는 step 01부터 step 18까지 bootstrap 문서가 있습니다.
+- `docs/execplans`에는 step 05부터 step 18까지 실행 계획 문서가 있습니다.
 - 다음 handoff 시점마다 이 문서를 최신 상태로 갱신합니다.

@@ -2,13 +2,14 @@
 
 ## Snapshot
 
-- Date: 2026-04-11
-- Current branch: `develop`
+- Date: 2026-04-12
+- Current branch: `step/18-subscription-ops-hardening`
 - Workspace status target: clean
-- `develop` status: merged through `step/17-subscription-ops-workbench` and ready for step 18
-- `origin/develop` should match this branch after the current push
+- `develop` status: merged through `step/17-subscription-ops-workbench`
+- step branch status: `step/18-subscription-ops-hardening` is implemented, validated, and ready to push
+- `origin/develop` still represents the post-step-17 baseline until step 18 is merged
 
-## Completed Through Step 17
+## Completed Through Step 18
 
 - `step 01`: route foundation
 - `step 02`: layout navigation
@@ -27,34 +28,31 @@
 - `step 15`: customer account center
 - `step 16`: admin command center
 - `step 17`: subscription ops workbench
+- `step 18`: subscription ops hardening
 
-## Step 17 Summary
+## Step 18 Summary
 
-Added a dedicated `/admin/subscriptions` route for subscription state operations and restored `/admin/customers` as the customer exploration table.
+Hardened the `/admin/subscriptions` workbench so subscription actions now carry stronger operational context and safer confirmation rules.
 
 Key files:
 
-- `docs/execplans/step-17-subscription-ops-workbench.md`
-- `docs/steps/bootstrap-step-17-subscription-ops-workbench.md`
-- `src/app/(admin)/admin/customers/page.tsx`
+- `docs/execplans/step-18-subscription-ops-hardening.md`
+- `docs/steps/bootstrap-step-18-subscription-ops-hardening.md`
 - `src/app/(admin)/admin/subscriptions/page.tsx`
-- `src/app/(admin)/admin/subscriptions/loading.tsx`
-- `src/features/customers/components/customer-ops-table-view.tsx`
-- `src/features/admin-users/lib/admin-access.ts`
-- `src/features/admin-home/lib/admin-command-center.ts`
-- `src/lib/navigation.ts`
-- `tests/customer-ops-table-view.test.tsx`
-- `tests/admin-access.test.tsx`
+- `src/components/shared/action-feedback-banner.tsx`
+- `src/features/customers/components/subscription-status-workbench.tsx`
+- `src/features/customers/lib/subscription-ops.ts`
+- `tests/subscription-status-workbench.test.tsx`
 
 Included changes:
 
-- added subscriptions navigation and access policy
-- moved the subscription status workbench onto `/admin/subscriptions`
-- restored customer search/filter/sort/pagination on `/admin/customers`
-- updated command center links to use the subscriptions workflow
-- added and updated handoff documentation
+- required a meaningful action reason before applying a status transition
+- moved transition labels, guardrails, and summary builders into a shared helper
+- surfaced payment, refund, coupon, and scheduled-cancel context in the workbench detail view
+- added success and failure feedback states plus session activity logging with the recorded reason
+- expanded tests to cover guarded transitions, related context, and post-action filtered empty states
 
-Validation completed for step 17:
+Validation completed for step 18:
 
 - `npm.cmd run lint`
 - `npm.cmd run typecheck`
@@ -65,11 +63,13 @@ Relevant commits:
 
 - `fc73be9` `feat(admin): add subscription ops workbench`
 - `b9bb1a3` `docs(repo): add codex handoff`
+- step 18 commit can be read from `git log --oneline --decorate -6` on this branch
 
 ## Remote Status
 
-- `origin/develop` should include step 17 after the current push
+- `origin/develop` includes step 17, not step 18 yet
 - `origin/step/17-subscription-ops-workbench` already contains the step 17 branch history
+- `origin/step/18-subscription-ops-hardening` should be pushed after the current commit
 
 ## Resume Checklist
 
@@ -84,6 +84,7 @@ Relevant commits:
 
 If continuing with a new step:
 
-1. create `step/18-<slug>` from latest `develop`
+1. merge `step/18-subscription-ops-hardening` into latest `develop`
 2. create both planning docs before implementation
-3. implement, validate, commit, and push
+3. branch `step/19-<slug>` from updated `develop`
+4. implement, validate, commit, and push
