@@ -2,92 +2,99 @@
 
 ## Snapshot
 
-- Date: 2026-04-12
-- Current branch: `step/20-admin-data-composition`
-- Workspace status target: clean
-- `develop` status: merged through `step/19-admin-route-polish`
-- step branch status: `step/20-admin-data-composition` contains the step 20 refactor plus a validated theme/contrast polish pass
-- `origin/develop` still represents the post-step-19 baseline until step 20 is merged
+- Date: `2026-04-12`
+- Branch: `step/20-admin-data-composition`
+- Remote: `origin/step/20-admin-data-composition`
+- Workspace: clean
+- `develop`: still at step 19
+- Ready state: step 20 branch is implemented, validated, committed, and pushed
 
-## In-Progress Branch Addendum
+## Branch Contents
 
-- Added `next-themes` `0.4.6` for persisted light, dark, and system theme switching.
-- Added shared theme toggle UI to both customer and admin layouts.
-- Extended `src/app/globals.css` with dark-mode utility remapping and stronger secondary action contrast.
-- Added theme-aware surface polish for customer acquisition cards and a focused `tests/theme-toggle.test.tsx`.
-- This addendum is intended to travel with the same step branch before merge to `develop`.
+This branch currently includes:
 
-## Completed Through Step 20
+- step 20 admin data composition refactor
+- theme switching support
+- light, dark, and system mode toggle UI
+- button contrast polish for repeated secondary action patterns
 
-- `step 01`: route foundation
-- `step 02`: layout navigation
-- `step 03`: ui primitives
-- `step 04`: domain types and mocks
-- `step 05`: admin workflows
-- `step 06`: customer detail
-- `step 07`: audit log
-- `step 08`: customer ops table
-- `step 09`: refund detail
-- `step 10`: payment detail
-- `step 11`: coupon operations
-- `step 12`: analytics dashboard
-- `step 13`: admin access control
-- `step 14`: customer acquisition flow
-- `step 15`: customer account center
-- `step 16`: admin command center
-- `step 17`: subscription ops workbench
-- `step 18`: subscription ops hardening
-- `step 19`: admin route polish
-- `step 20`: admin data composition
+## Commits To Know
 
-## Step 20 Summary
+1. `0b6ceee` `feat(admin): compose admin detail snapshots`
+2. `0ff3138` `feat(ui): add theme switching and contrast polish`
 
-Refactored repeated admin detail snapshot composition into shared helpers so customer, payment, and refund detail builders now reuse the same subscription enrichment, sorting, and activity-item mapping logic.
+`develop` currently points to:
 
-Key files:
+- `b002784` `feat(admin): polish admin route context`
+
+## Main Changes
+
+### Step 20 Refactor
+
+- added `src/lib/admin-detail-composition.ts`
+- centralized subscription plus plan enrichment
+- centralized payment, refund, and coupon sorting helpers
+- centralized admin detail activity item mapping
+- updated customer, payment, and refund detail snapshot builders to use the shared helpers
+
+### Theme And Contrast Pass
+
+- installed `next-themes@0.4.6`
+- added `src/components/shared/theme-provider.tsx`
+- added `src/components/shared/theme-toggle.tsx`
+- wired theme provider in `src/app/layout.tsx`
+- exposed theme toggle in:
+  - `src/app/(customer)/layout.tsx`
+  - `src/features/admin-users/components/admin-access-shell.tsx`
+- expanded `src/app/globals.css` with:
+  - theme tokens
+  - dark-mode utility remapping
+  - stronger secondary action contrast
+  - theme-specific surface helpers
+- applied theme-aware surface helpers in customer acquisition screens
+
+## Key Files
 
 - `docs/execplans/step-20-admin-data-composition.md`
 - `docs/steps/bootstrap-step-20-admin-data-composition.md`
+- `docs/execplans/theme-mode-accessibility-polish.md`
 - `src/lib/admin-detail-composition.ts`
 - `src/features/customers/lib/customer-detail.ts`
 - `src/features/payments/lib/payment-detail.ts`
 - `src/features/refunds/lib/refund-detail.ts`
+- `src/app/layout.tsx`
+- `src/app/globals.css`
+- `src/components/shared/theme-provider.tsx`
+- `src/components/shared/theme-toggle.tsx`
 - `tests/admin-detail-composition.test.ts`
-- `tests/customer-detail.test.tsx`
-- `tests/payment-detail.test.tsx`
-- `tests/refund-detail.test.tsx`
+- `tests/theme-toggle.test.tsx`
 
-Included changes:
+## Validation
 
-- added shared helpers for subscription enrichment, payment/refund/coupon sorting, and detail activity item mapping
-- refactored customer, payment, and refund snapshot builders to use the shared helpers
-- preserved existing detail page behavior while reducing repeated composition code
-- added helper-focused tests and kept detail snapshot tests green
-
-Validation completed for step 20:
+The current branch passed:
 
 - `npm.cmd run lint`
 - `npm.cmd run typecheck`
 - `npm.cmd run test`
 - `npm.cmd run build`
 
-Relevant commits:
-
-- `fc73be9` `feat(admin): add subscription ops workbench`
-- `b9bb1a3` `docs(repo): add codex handoff`
-- `ae5b43a` `feat(admin): harden subscription ops workbench`
-- `b002784` `feat(admin): polish admin route context`
-- step 20 commit can be read from `git log --oneline --decorate -6` on this branch
-
 ## Remote Status
 
-- `origin/develop` includes step 19, not step 20 yet
-- `origin/step/17-subscription-ops-workbench` already contains the step 17 branch history
-- `origin/step/18-subscription-ops-hardening` contains the previous step history
-- `origin/step/19-admin-route-polish` contains the previous step history
-- `origin/step/20-admin-data-composition` contains the branch history; confirm the latest commit after any follow-up push
+- `origin/step/20-admin-data-composition` is up to date with local HEAD
+- `origin/develop` does not include step 20 yet
+- next required workflow move is merging this branch into `develop`
 
-## Resume Checklist
+## Resume Flow
+
+When resuming:
+
+1. confirm branch and clean status
+2. merge `step/20-admin-data-composition` into `develop`
+3. push `develop`
+4. create `step/21-<slug>` from latest `develop`
+5. create both required planning docs before implementation
+
+## Quick Commands
 
 1. `Get-Content AGENTS.md`
 2. `Get-Content docs/codex-handoff.md`
@@ -95,12 +102,3 @@ Relevant commits:
 4. `git branch --show-current`
 5. `git status --short`
 6. `git log --oneline --decorate -6`
-
-## Next Move When Resuming
-
-If continuing with a new step:
-
-1. merge `step/20-admin-data-composition` into latest `develop`
-2. create both planning docs before implementation
-3. branch `step/21-<slug>` from updated `develop`
-4. implement, validate, commit, and push
